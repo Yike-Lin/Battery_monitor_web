@@ -32,7 +32,8 @@ const kpiList = ref([
   { key: 'device', label: '接入设备', value: '1,280', unit: '台', sub: '+12 (今日)', trend: 1 },
   { key: 'online', label: '在线率', value: '88.3', unit: '%', sub: '稳定运行', trend: 0 },
   { key: 'alarm', label: '待处理告警', value: '3', unit: '条', sub: '需立即关注', trend: -1 },
-  { key: 'energy', label: '累计充放电', value: '8.32', unit: 'MWh', sub: '+12.5%', trend: 1 },
+  { key: 'energy', label: '累计充电', value: '8.32', unit: 'MWh', sub: '+12.5%', trend: 1 },
+  { key: 'energy', label: '累计放电', value: '9.12', unit: 'MWh', sub: '+9.0%', trend: 1 }
 ])
 
 const tableData = ref([

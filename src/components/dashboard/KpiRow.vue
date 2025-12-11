@@ -1,14 +1,13 @@
 <!-- 上面四个实时的KPI卡片 -->
 <template>
     <div class="grid-row kpi-row">
-      <div
-        class="bento-card kpi-card"
-        v-for="item in kpiList"
-        :key="item.key"
-      >
+      
+      <div class="bento-card kpi-card" v-for="item in kpiList" :key="item.key">
+
         <div class="kpi-icon-bg">
           <span class="dot"></span>
         </div>
+
         <div class="kpi-content">
           <div class="kpi-label">{{ item.label }}</div>
           <div class="kpi-value-group">
@@ -19,6 +18,7 @@
             {{ item.sub }}
           </div>
         </div>
+
       </div>
     </div>
   </template>
@@ -40,12 +40,12 @@
   
   <style scoped>
   .grid-row {
-    display: flex;
+    position: relative;
     gap: 16px;
   }
   
   .kpi-row {
-    height: 110px;
+    height: 115px;
   }
   
   .bento-card {
@@ -71,8 +71,9 @@
     padding: 20px;
     display: flex;
     flex-direction: row;
-    align-items: flex-start;
-    justify-content: space-between;
+    align-items: center;
+    justify-content: center;
+    gap: 26px
   }
   
   .kpi-content {
@@ -92,7 +93,7 @@
   .kpi-value-group {
     display: flex;
     align-items: baseline;
-    gap: 4px;
+    gap: 10px;
   }
   
   .kpi-value {
@@ -106,6 +107,7 @@
     font-size: 13px;
     color: #86868b;
   }
+
   
   .kpi-sub {
     margin-top: 6px;

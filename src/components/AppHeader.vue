@@ -5,8 +5,9 @@
       </div>
   
       <div class="header-center">
-        <span class="logo-icon">🔋🪫</span>
+        <span class="logo-icon">🔋</span>
         <span class="app-title">电池运营监控系统</span>
+        <span class="logo-icon">🪫</span>
       </div>
   
       <div class="header-right">
