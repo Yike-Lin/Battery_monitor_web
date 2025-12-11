@@ -7,9 +7,6 @@ import router from './router'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 
-// 引入全局样式
-// import './assets/main.css'
-
 const app = createApp(App)
 
 app.use(createPinia())
