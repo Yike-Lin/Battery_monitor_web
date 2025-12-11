@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 
+
 // 定义路由数组
 const routes: RouteRecordRaw[] = [
   {
