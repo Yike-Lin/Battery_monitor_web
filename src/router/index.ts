@@ -5,7 +5,7 @@ import type { RouteRecordRaw } from 'vue-router'
 // 定义路由数组
 const routes: RouteRecordRaw[] = [
   {
-    // 根路径重定向到dashboard
+    // 重定向
     path: '/',
     redirect: '/dashboard',
   },
@@ -14,6 +14,31 @@ const routes: RouteRecordRaw[] = [
     name: 'Dashboard',
     // 懒加载Dashboard组件,优化初始加载速度
     component: () => import('../views/Dashboard.vue'),
+  },
+  {
+    path: '/admin',
+    component: () => import('../layouts/AdminLayout.vue'),
+    redirect: '/admin/battery',
+    children: [
+      {
+        path: 'battery',
+        name: 'AdminBattery',
+        component: () => import('../views/admin/BatteryList.vue'),
+        meta: { title: '电池管理' },
+      },
+      {
+        path: 'device',
+        name: 'AdminDevice',
+        component: () => import('../views/admin/DeviceList.vue'),
+        meta: { title: '设备管理' },
+      },
+      {
+        path: 'user',
+        name: 'AdminUser',
+        component: () => import('../views/admin/UserList.vue'),
+        meta: { title: '用户管理' },
+      },
+    ],
   },
 ]
 
