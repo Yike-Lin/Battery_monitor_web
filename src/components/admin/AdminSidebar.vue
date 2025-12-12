@@ -79,7 +79,9 @@ const navItems = [
   /* justify-content: space-between; */
   justify-content: flex-start;
 
-  background: radial-gradient(circle at 0 0, #141824 0, #050509 55%, #020308 100%);
+  /* background: radial-gradient(circle at 0 0, #141824 0, #050509 55%, #020308 100%);*/
+  background: rgba(30, 30, 30, 0.6);
+
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 18px 45px rgba(0, 0, 0, 0.9);

@@ -14,7 +14,6 @@
         <div class="header-right">
           <span class="header-chip status">运行中</span>
           <span class="header-chip env">生产环境</span>
-          <span class="header-user">运维管理员</span>
         </div>
       </header>
 
@@ -51,11 +50,7 @@ const currentTitle = computed(() => (route.meta.title as string) || '后台管�
   display: flex;
   flex-direction: column;
   border-radius: 22px;
-  background: radial-gradient(
-    circle at 100% 0,
-    rgba(72, 84, 118, 0.35),
-    rgba(9, 10, 16, 0.96)
-  );
+  background:  rgba(9, 10, 16, 0.96);
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow:
     0 18px 45px rgba(0, 0, 0, 0.85),
@@ -72,9 +67,7 @@ const currentTitle = computed(() => (route.meta.title as string) || '后台管�
   justify-content: space-between;
   padding: 0 18px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background:
-    radial-gradient(circle at 0 0, rgba(111, 185, 255, 0.12), transparent 55%),
-    rgba(7, 8, 15, 0.98);
+  background:rgba(30, 30, 30, 0.6);
   color: #f5f5f7;
 }
 
@@ -85,12 +78,12 @@ const currentTitle = computed(() => (route.meta.title as string) || '后台管�
 }
 
 .header-title {
-  font-size: 15px;
+  font-size: 20px;
   font-weight: 600;
 }
 
 .header-sub {
-  font-size: 11px;
+  font-size: 15px;
   color: #8e8e93;
 }
 

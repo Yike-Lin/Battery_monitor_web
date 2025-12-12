@@ -11,7 +11,7 @@
             </el-button>
           </div>
         </div>
-  
+
         <div class="toolbar-body">
           <el-form :inline="true" :model="searchForm" label-width="80">
             <el-form-item label="关键字">
@@ -22,7 +22,7 @@
                 style="width: 220px"
               />
             </el-form-item>
-  
+
             <el-form-item label="状态">
               <el-select
                 v-model="searchForm.status"
@@ -36,14 +36,14 @@
                 <el-option label="告警" value="alarm" />
               </el-select>
             </el-form-item>
-  
+
             <el-form-item>
               <el-button type="primary" @click="handleSearch">查询</el-button>
             </el-form-item>
           </el-form>
         </div>
       </div>
-  
+
       <!-- 列表卡片 -->
       <div class="bento-card list-card">
         <div class="card-header">
@@ -53,12 +53,11 @@
           </div>
           <span class="status-tag">实时同步</span>
         </div>
-  
+
         <div class="apple-table-wrapper">
           <el-table
             :data="pagedData"
             v-loading="loading"
-            stripe
             size="small"
           >
             <el-table-column prop="id" label="ID" width="70" />
@@ -95,7 +94,7 @@
               </template>
             </el-table-column>
           </el-table>
-  
+
           <div class="table-footer">
             <el-pagination
               background
@@ -108,7 +107,7 @@
           </div>
         </div>
       </div>
-  
+
       <!-- 新增 / 编辑 弹窗 -->
       <el-dialog
         v-model="dialogVisible"
@@ -148,7 +147,7 @@
             </el-select>
           </el-form-item>
         </el-form>
-  
+
         <template #footer>
           <span class="dialog-footer">
             <el-button @click="dialogVisible = false">取 消</el-button>
@@ -160,13 +159,13 @@
       </el-dialog>
     </div>
   </template>
-  
+
   <script setup lang="ts">
   import { computed, reactive, ref } from 'vue'
   import { ElMessage, ElMessageBox } from 'element-plus'
-  
+
   type BatteryStatus = 'online' | 'offline' | 'alarm'
-  
+
   interface Battery {
     id: number
     name: string
@@ -176,13 +175,13 @@
     status: BatteryStatus
     updatedAt: string
   }
-  
+
   // 搜索条件
   const searchForm = reactive({
     keyword: '',
     status: 'all',
   })
-  
+
   // 模拟数据（后面你可以换成后端接口返回的数据）
   const tableData = ref<Battery[]>([
     {
@@ -212,13 +211,58 @@
       status: 'offline',
       updatedAt: '2025-12-09 22:01:37',
     },
+        {
+      id: 3,
+      name: '电池组-003',
+      station: '广州 · 黄埔站',
+      soc: 0,
+      temperature: 25.0,
+      status: 'offline',
+      updatedAt: '2025-12-09 22:01:37',
+    },
+        {
+      id: 3,
+      name: '电池组-003',
+      station: '广州 · 黄埔站',
+      soc: 0,
+      temperature: 25.0,
+      status: 'offline',
+      updatedAt: '2025-12-09 22:01:37',
+    },
+        {
+      id: 3,
+      name: '电池组-003',
+      station: '广州 · 黄埔站',
+      soc: 0,
+      temperature: 25.0,
+      status: 'offline',
+      updatedAt: '2025-12-09 22:01:37',
+    },
+        {
+      id: 3,
+      name: '电池组-003',
+      station: '广州 · 黄埔站',
+      soc: 0,
+      temperature: 25.0,
+      status: 'offline',
+      updatedAt: '2025-12-09 22:01:37',
+    },
+        {
+      id: 3,
+      name: '电池组-003',
+      station: '广州 · 黄埔站',
+      soc: 0,
+      temperature: 25.0,
+      status: 'offline',
+      updatedAt: '2025-12-09 22:01:37',
+    },
   ])
-  
+
   const loading = ref(false)
-  
+
   const pageSize = 10
   const currentPage = ref(1)
-  
+
   const filteredData = computed(() => {
     const keyword = searchForm.keyword.trim().toLowerCase()
     return tableData.value.filter((item) => {
@@ -227,47 +271,47 @@
         item.name.toLowerCase().includes(keyword) ||
         item.station.toLowerCase().includes(keyword) ||
         String(item.id).includes(keyword)
-  
+
       const matchStatus =
         searchForm.status === 'all' || item.status === searchForm.status
-  
+
       return matchKeyword && matchStatus
     })
   })
-  
+
   const pagedData = computed(() => {
     const start = (currentPage.value - 1) * pageSize
     return filteredData.value.slice(start, start + pageSize)
   })
-  
+
   const handlePageChange = (page: number) => {
     currentPage.value = page
   }
-  
+
   const handleSearch = () => {
     currentPage.value = 1
   }
-  
+
   const handleReset = () => {
     searchForm.keyword = ''
     searchForm.status = 'all'
     currentPage.value = 1
   }
-  
+
   const getStatusType = (status: BatteryStatus) => {
     if (status === 'online') return 'success'
     if (status === 'offline') return 'info'
     if (status === 'alarm') return 'danger'
     return 'info'
   }
-  
+
   const renderStatusText = (status: BatteryStatus) => {
     if (status === 'online') return '在线'
     if (status === 'offline') return '离线'
     if (status === 'alarm') return '告警'
     return status
   }
-  
+
   // 弹窗相关
   const dialogVisible = ref(false)
   const dialogMode = ref<'create' | 'edit'>('create')
@@ -280,7 +324,7 @@
     status: 'online',
     updatedAt: '',
   })
-  
+
   const openCreate = () => {
     dialogMode.value = 'create'
     Object.assign(editForm, {
@@ -294,25 +338,25 @@
     })
     dialogVisible.value = true
   }
-  
+
   const openEdit = (row: Battery) => {
     dialogMode.value = 'edit'
     Object.assign(editForm, { ...row })
     dialogVisible.value = true
   }
-  
+
   const handleSubmit = () => {
     if (!editForm.name) {
       ElMessage.warning('请填写电池名称')
       return
     }
-  
+
     if (dialogMode.value === 'create') {
       const newId =
         tableData.value.length > 0
           ? Math.max(...tableData.value.map((i) => i.id)) + 1
           : 1
-  
+
       tableData.value.push({
         ...editForm,
         id: newId,
@@ -329,10 +373,10 @@
         ElMessage.success('保存修改成功')
       }
     }
-  
+
     dialogVisible.value = false
   }
-  
+
   const handleDelete = (row: Battery) => {
     ElMessageBox.confirm(
       `确认删除电池「${row.name}」吗？`,
@@ -348,47 +392,47 @@
       .catch(() => {})
   }
   </script>
-  
+
   <style scoped>
   .battery-page {
     display: flex;
     flex-direction: column;
     gap: 14px;
   }
-  
+
   /* 工具栏卡片 */
   .toolbar-card {
     padding-bottom: 10px;
   }
-  
+
   .toolbar-body {
     padding: 12px 16px 14px;
   }
-  
+
   /* 列表卡片 */
   .list-card {
     display: flex;
     flex-direction: column;
   }
-  
+
   .card-header .sub {
     font-size: 12px;
     margin-left: 6px;
     color: #86868b;
   }
-  
+
   .toolbar-right {
     display: flex;
     align-items: center;
     gap: 8px;
   }
-  
+
   .table-footer {
     padding: 10px 8px 6px;
     display: flex;
     justify-content: flex-end;
   }
-  
+
   .dialog-form {
     padding-top: 8px;
   }

@@ -1,7 +1,7 @@
 <!-- 上面四个实时的KPI卡片 -->
 <template>
     <div class="grid-row kpi-row">
-      
+
       <div class="bento-card kpi-card" v-for="item in kpiList" :key="item.key">
 
         <div class="kpi-icon-bg">
@@ -22,7 +22,7 @@
       </div>
     </div>
   </template>
-  
+
   <script setup lang="ts">
   interface KpiItem {
     key: string
@@ -32,22 +32,22 @@
     sub: string
     trend: number
   }
-  
+
   defineProps<{
     kpiList: KpiItem[]
   }>()
   </script>
-  
+
   <style scoped>
   .grid-row {
     position: relative;
     gap: 16px;
   }
-  
+
   .kpi-row {
     height: 115px;
   }
-  
+
   .bento-card {
     background: rgba(30, 30, 30, 0.6);
     backdrop-filter: blur(20px);
@@ -61,11 +61,11 @@
     color: #f5f5f7;
     transition: border-color 0.2s ease;
   }
-  
+
   .bento-card:hover {
     border-color: rgba(255, 255, 255, 0.15);
   }
-  
+
   .kpi-card {
     flex: 1;
     padding: 20px;
@@ -75,46 +75,46 @@
     justify-content: center;
     gap: 26px
   }
-  
+
   .kpi-content {
     display: flex;
     flex-direction: column;
     justify-content: center;
     height: 100%;
   }
-  
+
   .kpi-label {
     font-size: 13px;
     color: #86868b;
     font-weight: 500;
     margin-bottom: 4px;
   }
-  
+
   .kpi-value-group {
     display: flex;
     align-items: baseline;
     gap: 10px;
   }
-  
+
   .kpi-value {
     font-size: 28px;
     font-weight: 700;
     font-family: "SF Pro Display", -apple-system, sans-serif;
     color: #fff;
   }
-  
+
   .kpi-unit {
     font-size: 13px;
     color: #86868b;
   }
 
-  
+
   .kpi-sub {
     margin-top: 6px;
     font-size: 12px;
     color: #86868b;
   }
-  
+
   .kpi-icon-bg .dot {
     width: 8px;
     height: 8px;
