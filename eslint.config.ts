@@ -20,3 +20,9 @@ export default defineConfigWithVueTs(
   vueTsConfigs.recommended,
   skipFormatting,
 )
+
+module.exports = {
+  rules: {
+    'vue/multi-word-component-names': 'off'  // 完全关闭
+  }
+}
