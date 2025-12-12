@@ -76,7 +76,8 @@ const navItems = [
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  /* justify-content: space-between; */
+  justify-content: flex-start;
 
   background: radial-gradient(circle at 0 0, #141824 0, #050509 55%, #020308 100%);
   border-radius: 18px;
@@ -194,6 +195,7 @@ const navItems = [
   flex-direction: column;
   gap: 12px;
   margin-bottom: 4px;
+  margin-top: auto;
 }
 
 .nav-item.ghost {
