@@ -1,7 +1,7 @@
 <template>
   <div class="bento-card">
     <div class="card-header">
-      <span class="card-title">在线状态</span>
+      <span class="card-title">电池组健康分布</span>
     </div>
     <div ref="chartRef" class="chart-container"></div>
   </div>

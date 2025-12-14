@@ -1,19 +1,25 @@
 <template>
   <div class="dashboard-container">
-    <!-- Row 1: KPI -->
     <KpiRow :kpi-list="kpiList" />
 
-    <!-- Row 2: Charts -->
     <div class="grid-row middle-row">
-      <RealtimePowerCard class="middle-left" />
-
-      <div class="middle-right-col">
+      
+      <div class="middle-side-col">
         <StatusPieCard class="small-card" />
         <AlarmBarCard class="small-card" />
       </div>
+
+      <div class="middle-center-col">
+        <RealtimePowerCard class="full-height-card" />
+      </div>
+
+      <div class="middle-side-col">
+        <StatusPieCard class="small-card" />
+        <AlarmBarCard class="small-card" />
+      </div>
+      
     </div>
 
-    <!-- Row 3: Table -->
     <div class="grid-row bottom-row">
       <DeviceTableCard :table-data="tableData" />
     </div>
@@ -28,12 +34,14 @@ import StatusPieCard from '@/components/dashboard/StatusPieCard.vue'
 import AlarmBarCard from '@/components/dashboard/AlarmBarCard.vue'
 import DeviceTableCard from '@/components/dashboard/DeviceTableCard.vue'
 
+// 1. 在这里新增两个卡片数据到数组最前面
 const kpiList = ref([
-  { key: 'device', label: '接入设备', value: '1,280', unit: '台', sub: '+12 (今日)', trend: 1 },
+
+  { key: 'health', label: '健康度', value: '98', unit: '分', sub: '优', trend: 1 },
+  { key: 'device', label: '监控电池总数', value: '1,280', unit: '台', sub: '+12 (今日)', trend: 1 },
   { key: 'online', label: '在线率', value: '88.3', unit: '%', sub: '稳定运行', trend: 0 },
   { key: 'alarm', label: '待处理告警', value: '3', unit: '条', sub: '需立即关注', trend: -1 },
   { key: 'energy', label: '累计充电', value: '8.32', unit: 'MWh', sub: '+12.5%', trend: 1 },
-  { key: 'energy', label: '累计放电', value: '9.12', unit: 'MWh', sub: '+9.0%', trend: 1 }
 ])
 
 const tableData = ref([
@@ -51,6 +59,9 @@ const tableData = ref([
   display: flex;
   flex-direction: column;
   gap: 16px;
+  /* 增加一点内边距防止贴边 */
+  padding: 16px; 
+  box-sizing: border-box;
 }
 
 /* 公共行布局 */
@@ -59,26 +70,40 @@ const tableData = ref([
   gap: 16px;
 }
 
-/* Row1 固定高度；具体高度在 KpiRow 控制也可以，这里指定布局就行 */
+/* --- 中间行布局核心修改 Start --- */
 .middle-row {
   flex: 1;
-  min-height: 300px;
+  min-height: 340px; /* 稍微调高一点，因为变成了三栏，内容可能会挤 */
 }
 
-.middle-left {
-  flex: 2;
-}
-
-.middle-right-col {
-  flex: 1;
+/* 两侧列：占比 1 */
+.middle-side-col {
+  flex: 1; 
   display: flex;
   flex-direction: column;
   gap: 16px;
+  /* 限制最小宽度，防止屏幕缩小时卡片压扁 */
+  min-width: 200px; 
 }
 
+/* 中间列：占比 2 (这就是你想要的中间大，两边小) */
+.middle-center-col {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 确保中间的卡片撑满高度 */
+.full-height-card {
+  flex: 1;
+  height: 100%;
+}
+
+/* 确保两侧的小卡片平分高度 */
 .small-card {
   flex: 1;
 }
+/* --- 中间行布局核心修改 End --- */
 
 .bottom-row {
   height: 280px;
