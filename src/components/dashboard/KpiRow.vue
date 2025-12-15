@@ -1,126 +1,109 @@
-<!-- 上面四个实时的KPI卡片 -->
 <template>
-    <div class="grid-row kpi-row">
+  <div
+    class="kpi-grid-container"
+    :style="{ gridTemplateColumns: `repeat(${kpiList.length}, 1fr)` }"
+  >
+    <div
+      v-for="item in kpiList"
+      :key="item.key"
+      class="bento-card kpi-card"
+    >
 
-      <div class="bento-card kpi-card" v-for="item in kpiList" :key="item.key">
+      <div class="kpi-content">
+        <div class="kpi-label">{{ item.label }}</div>
 
-        <div class="kpi-icon-bg">
-          <span class="dot"></span>
+        <div class="kpi-value-group">
+          <span class="kpi-value">{{ item.value }}</span>
+          <span class="kpi-unit" v-if="item.unit">{{ item.unit }}</span>
         </div>
 
-        <div class="kpi-content">
-          <div class="kpi-label">{{ item.label }}</div>
-          <div class="kpi-value-group">
-            <span class="kpi-value">{{ item.value }}</span>
-            <span class="kpi-unit" v-if="item.unit">{{ item.unit }}</span>
-          </div>
-          <div class="kpi-sub" :class="{ 'trend-up': item.trend > 0 }">
-            {{ item.sub }}
-          </div>
-        </div>
-
+        <div class="kpi-sub">{{ item.sub }}</div>
       </div>
     </div>
-  </template>
+  </div>
+</template>
 
-  <script setup lang="ts">
-  interface KpiItem {
-    key: string
-    label: string
-    value: string
-    unit?: string
-    sub: string
-    trend: number
-  }
+<script setup lang="ts">
+interface KpiItem {
+  key: string
+  label: string
+  value: string
+  unit?: string
+  sub: string
+  trend: number
+}
 
-  defineProps<{
-    kpiList: KpiItem[]
-  }>()
-  </script>
+defineProps<{ kpiList: KpiItem[] }>()
+</script>
 
-  <style scoped>
-  .grid-row {
-    position: relative;
-    gap: 16px;
-  }
+<style scoped>
+.kpi-grid-container {
+  display: grid;
+  gap: 14px;
+  height: 100px;
+  width: 100%;
+  margin-top: -20px;
+}
 
-  .kpi-row {
-    height: 115px;
-  }
+.bento-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  box-sizing: border-box;
+  background: rgba(30, 30, 30, 0.6);
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.1);
+  text-align: center;
+  padding: 16px;
+}
 
-  .bento-card {
-    background: rgba(30, 30, 30, 0.6);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-radius: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-    overflow: hidden;
+
+
+
+.kpi-content {
     display: flex;
     flex-direction: column;
-    color: #f5f5f7;
-    transition: border-color 0.2s ease;
-  }
-
-  .bento-card:hover {
-    border-color: rgba(255, 255, 255, 0.15);
-  }
-
-  .kpi-card {
-    flex: 1;
-    padding: 20px;
-    display: flex;
-    flex-direction: row;
     align-items: center;
-    justify-content: center;
-    gap: 26px
-  }
+    gap: 4px;
+}
 
-  .kpi-content {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    height: 100%;
-  }
 
-  .kpi-label {
-    font-size: 13px;
-    color: #86868b;
-    font-weight: 500;
-    margin-bottom: 4px;
-  }
-
-  .kpi-value-group {
+.kpi-value-group {
     display: flex;
     align-items: baseline;
-    gap: 10px;
-  }
+    justify-content: center;
+    gap: 4px;
+}
 
-  .kpi-value {
-    font-size: 28px;
+.kpi-value {
+    font-size: 32px;
     font-weight: 700;
-    font-family: "SF Pro Display", -apple-system, sans-serif;
     color: #fff;
-  }
+    line-height: 1.1;
+}
+.kpi-unit {
+    font-size: 16px;
+    color: #86868b;
+    font-weight: normal;
+}
 
-  .kpi-unit {
+.kpi-label {
+    color: #86868b;
+    font-size: 14px;
+}
+
+.kpi-sub {
+    color: #666;
     font-size: 13px;
-    color: #86868b;
-  }
+    margin-top: 2px;
+}
 
-
-  .kpi-sub {
-    margin-top: 6px;
-    font-size: 12px;
-    color: #86868b;
-  }
-
-  .kpi-icon-bg .dot {
-    width: 8px;
-    height: 8px;
-    background: #0a84ff;
-    border-radius: 50%;
-    display: block;
-    box-shadow: 0 0 10px rgba(10, 132, 255, 0.5);
-  }
-  </style>
+@media (max-width: 1200px) {
+  .kpi-value { font-size: 28px; }
+  .bento-card { padding: 12px; }
+}
+</style>

@@ -1,28 +1,35 @@
 <template>
   <div class="dashboard-container">
+
+    <!-- KPI Row 使用 Element Plus 栅格 -->
     <KpiRow :kpi-list="kpiList" />
 
-    <div class="grid-row middle-row">
-      
-      <div class="middle-side-col">
+    <!-- 中间三列布局 -->
+    <el-row :gutter="16" class="middle-row" style="flex:1;">
+
+      <el-col :span="6" class="side-col">
         <StatusPieCard class="small-card" />
         <AlarmBarCard class="small-card" />
-      </div>
+      </el-col>
 
-      <div class="middle-center-col">
+      <el-col :span="12" class="center-col">
         <RealtimePowerCard class="full-height-card" />
-      </div>
+      </el-col>
 
-      <div class="middle-side-col">
+      <el-col :span="6" class="side-col">
         <StatusPieCard class="small-card" />
         <AlarmBarCard class="small-card" />
-      </div>
-      
-    </div>
+      </el-col>
 
-    <div class="grid-row bottom-row">
-      <DeviceTableCard :table-data="tableData" />
-    </div>
+    </el-row>
+
+    <!-- 底部设备表格 -->
+    <el-row>
+      <el-col :span="24" class="bottom-row">
+        <DeviceTableCard :table-data="tableData" />
+      </el-col>
+    </el-row>
+
   </div>
 </template>
 
@@ -34,7 +41,7 @@ import StatusPieCard from '@/components/dashboard/StatusPieCard.vue'
 import AlarmBarCard from '@/components/dashboard/AlarmBarCard.vue'
 import DeviceTableCard from '@/components/dashboard/DeviceTableCard.vue'
 
-// 1. 在这里新增两个卡片数据到数组最前面
+
 const kpiList = ref([
 
   { key: 'health', label: '健康度', value: '98', unit: '分', sub: '优', trend: 1 },
@@ -59,53 +66,44 @@ const tableData = ref([
   display: flex;
   flex-direction: column;
   gap: 16px;
-  /* 增加一点内边距防止贴边 */
-  padding: 16px; 
+  padding: 16px;
   box-sizing: border-box;
 }
 
-/* 公共行布局 */
-.grid-row {
-  display: flex;
-  gap: 16px;
-}
-
-/* --- 中间行布局核心修改 Start --- */
+/* 中间布局 */
 .middle-row {
   flex: 1;
-  min-height: 340px; /* 稍微调高一点，因为变成了三栏，内容可能会挤 */
+  min-height: 340px;
 }
 
-/* 两侧列：占比 1 */
-.middle-side-col {
-  flex: 1; 
+/* 左右列 */
+.side-col {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  /* 限制最小宽度，防止屏幕缩小时卡片压扁 */
-  min-width: 200px; 
+  height: 100%;
+  min-width: 200px;
 }
 
-/* 中间列：占比 2 (这就是你想要的中间大，两边小) */
-.middle-center-col {
-  flex: 2;
+/* 中间列 */
+.center-col {
   display: flex;
   flex-direction: column;
-}
-
-/* 确保中间的卡片撑满高度 */
-.full-height-card {
-  flex: 1;
   height: 100%;
 }
 
-/* 确保两侧的小卡片平分高度 */
+/* 卡片高度 */
+.full-height-card {
+  flex: 1;
+}
+
 .small-card {
   flex: 1;
 }
-/* --- 中间行布局核心修改 End --- */
 
+/* 底部表格 */
 .bottom-row {
   height: 280px;
 }
+
 </style>

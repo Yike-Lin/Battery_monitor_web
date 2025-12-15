@@ -6,7 +6,6 @@
     <div ref="chartRef" class="chart-container"></div>
   </div>
 </template>
-
 <script setup lang="ts">
 import { onMounted, nextTick } from 'vue'
 import * as echarts from 'echarts'
