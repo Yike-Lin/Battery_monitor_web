@@ -13,7 +13,7 @@
       </el-col>
 
       <el-col :span="12" class="center-col">
-        <RealtimePowerCard class="full-height-card" />
+        <CentralMonitor class="full-height-card" />
       </el-col>
 
       <el-col :span="6" class="side-col">
@@ -40,8 +40,7 @@ import SohChart from '@/components/dashboard/SohChart.vue'
 import SocChart from '@/components/dashboard/SocChart.vue'
 import RishChart from '@/components/dashboard/RishChart.vue'
 import RulChart from '@/components/dashboard/RulChart.vue'
-import RealtimePowerCard from '@/components/dashboard/RealtimePowerCard.vue'
-import AlarmBarCard from '@/components/dashboard/AlarmBarCard.vue'
+import CentralMonitor from '@/components/dashboard/CentralMonitor.vue'
 import DeviceTableCard from '@/components/dashboard/DeviceTableCard.vue'
 
 
