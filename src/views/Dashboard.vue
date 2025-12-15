@@ -9,7 +9,7 @@
 
       <el-col :span="6" class="side-col">
         <SohChart class="small-card" />
-        <AlarmBarCard class="small-card" />
+        <RishChart class="small-card" />
       </el-col>
 
       <el-col :span="12" class="center-col">
@@ -37,6 +37,7 @@
 import { ref } from 'vue'
 import KpiRow from '@/components/dashboard/KpiRow.vue'
 import SohChart from '@/components/dashboard/SohChart.vue'
+import RishChart from '@/components/dashboard/RishChart.vue'
 import RealtimePowerCard from '@/components/dashboard/RealtimePowerCard.vue'
 import StatusPieCard from '@/components/dashboard/StatusPieCard.vue'
 import AlarmBarCard from '@/components/dashboard/AlarmBarCard.vue'
