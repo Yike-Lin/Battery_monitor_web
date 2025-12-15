@@ -8,7 +8,7 @@
     <el-row :gutter="16" class="middle-row" style="flex:1;">
 
       <el-col :span="6" class="side-col">
-        <StatusPieCard class="small-card" />
+        <SohChart class="small-card" />
         <AlarmBarCard class="small-card" />
       </el-col>
 
@@ -36,6 +36,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import KpiRow from '@/components/dashboard/KpiRow.vue'
+import SohChart from '@/components/dashboard/SohChart.vue'
 import RealtimePowerCard from '@/components/dashboard/RealtimePowerCard.vue'
 import StatusPieCard from '@/components/dashboard/StatusPieCard.vue'
 import AlarmBarCard from '@/components/dashboard/AlarmBarCard.vue'
@@ -44,11 +45,46 @@ import DeviceTableCard from '@/components/dashboard/DeviceTableCard.vue'
 
 const kpiList = ref([
 
-  { key: 'health', label: '健康度', value: '98', unit: '分', sub: '优', trend: 1 },
-  { key: 'device', label: '监控电池总数', value: '1,280', unit: '台', sub: '+12 (今日)', trend: 1 },
-  { key: 'online', label: '在线率', value: '88.3', unit: '%', sub: '稳定运行', trend: 0 },
-  { key: 'alarm', label: '待处理告警', value: '3', unit: '条', sub: '需立即关注', trend: -1 },
-  { key: 'energy', label: '累计充电', value: '8.32', unit: 'MWh', sub: '+12.5%', trend: 1 },
+  {
+    key: 'total',
+    label: '接入电池组总数',
+    value: '128',          // 你的系统中当前连接的所有电池数量
+    unit: 'Sets',
+    sub: '在线率 98.4%',   // 表示系统连接稳定性
+    status: 'normal'      // 正常颜色
+  },
+  {
+    key: 'avg_soh',
+    label: '机组平均健康度',
+    value: '89.2',         // 所有电池 SOH 的平均值
+    unit: '%',
+    sub: '整体状态良好',    // 根据平均值判断：>90优秀，>80良好
+    status: 'success'     // 绿色
+  },
+  {
+    key: 'risk',
+    label: '风险预警/热失控',
+    value: '3',            // 重点！监控温度或电压超标的数量
+    unit: 'Alerts',
+    sub: '2 高温 / 1 过压', // 简要描述报警原因
+    status: 'danger'      // 红色，非常醒目，这通常是管理员第一眼要看的
+  },
+  {
+    key: 'charging',
+    label: '实时运行状态',
+    value: '45/128',       // 正在充电或放电的数量 / 总数
+    unit: 'Active',
+    sub: '当前处于工作循环',
+    status: 'warning'     // 黄色或蓝色，表示动态
+  },
+  {
+    key: 'replacement',
+    label: '待更换建议 (EOL)',
+    value: '5',            // 根据 RUL 预测，寿命即将耗尽的数量
+    unit: 'Units',
+    sub: 'RUL < 100 周期', // 筛选出 RUL 很低的电池，提示运维去换
+    status: 'info'        // 提示性颜色
+  }
 ])
 
 const tableData = ref([
