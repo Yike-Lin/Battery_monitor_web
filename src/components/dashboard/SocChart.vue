@@ -88,7 +88,7 @@ const updateChart = () => {
         roseType: 'radius',
 
         // 居中设置 (水平居中，垂直微调)
-        center: ['50%', '50%'],
+        center: ['45%', '50%'],
 
         // 内圆半径15%，外圆半径65%
         radius: ['35%', '80%'],

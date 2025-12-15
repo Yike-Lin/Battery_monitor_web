@@ -18,7 +18,7 @@
 
       <el-col :span="6" class="side-col">
         <SocChart class="small-card" />
-        <AlarmBarCard class="small-card" />
+        <RulChart class="small-card" />
       </el-col>
 
     </el-row>
@@ -39,6 +39,7 @@ import KpiRow from '@/components/dashboard/KpiRow.vue'
 import SohChart from '@/components/dashboard/SohChart.vue'
 import SocChart from '@/components/dashboard/SocChart.vue'
 import RishChart from '@/components/dashboard/RishChart.vue'
+import RulChart from '@/components/dashboard/RulChart.vue'
 import RealtimePowerCard from '@/components/dashboard/RealtimePowerCard.vue'
 import AlarmBarCard from '@/components/dashboard/AlarmBarCard.vue'
 import DeviceTableCard from '@/components/dashboard/DeviceTableCard.vue'
