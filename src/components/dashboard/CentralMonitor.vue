@@ -7,52 +7,53 @@
       </div>
       <div class="header-right">
         <div class="legend-box">
-          <span class="dot pack-a"></span> Batch-1
-          <span class="dot pack-b"></span> Batch-2
+          <div class="legend-item"><span class="dot pack-a"></span> Pack-A</div>
+          <div class="legend-item"><span class="dot pack-b"></span> Pack-B</div>
         </div>
       </div>
     </div>
 
-    <div ref="chartRef" class="chart-container"></div>
+    <div class="chart-wrapper">
+      <div ref="chartRef" class="chart-canvas"></div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, shallowRef, nextTick } from 'vue'
 import * as echarts from 'echarts'
-import { useEchart } from '@/composables/useEchart'
 
-const { chartRef, setOption, chartInstance } = useEchart()
+// --- 核心状态 ---
+const chartRef = ref<HTMLElement | null>(null)
+const myChart = shallowRef<echarts.ECharts | null>(null)
 let timer: any = null
+let resizeObserver: ResizeObserver | null = null
 
 // --- 配置参数 ---
-const MAX_POINTS = 60 // X轴显示点数
-const REFRESH_RATE = 200 // 刷新间隔 (ms)
+const MAX_POINTS = 60
+const REFRESH_RATE = 200 // 200ms 刷新一次
 
-// --- 数据结构 ---
-// 我们模拟两组电池：Pack A 和 Pack B
+// --- 数据队列 ---
 const dataQueue = {
   time: [] as string[],
-  packA_V: [] as number[], // A组电压
-  packA_C: [] as number[], // A组电流
-  packB_V: [] as number[], // B组电压
-  packB_C: [] as number[]  // B组电流
+  packA_V: [] as number[],
+  packA_C: [] as number[],
+  packB_V: [] as number[],
+  packB_C: [] as number[]
 }
 
 let tick = 0
 
-// --- 模拟数据生成 (模拟真实的充放电波动) ---
+// --- 1. 数据生成逻辑 ---
 const generateData = () => {
   tick += 0.2
-  const now = new Date().toLocaleTimeString().replace(/^\D*/, '')
+  const now = new Date().toLocaleTimeString().replace(/^\D*/, '') // 只留时间
 
-  // 模拟 Pack A: 电压较稳，电流波动大
-  // 电压：基准 3.8V + 正弦波 + 噪点
+  // 模拟 Pack A (电压3.8V基准)
   const va = 3.8 + Math.sin(tick) * 0.1 + (Math.random() - 0.5) * 0.05
-  // 电流：基准 12A + 较大的波动
   const ca = 12 + Math.cos(tick * 1.5) * 5 + Math.random() * 2
 
-  // 模拟 Pack B:
+  // 模拟 Pack B (电压3.65V基准)
   const vb = 3.65 + Math.sin(tick + 2) * 0.15 + (Math.random() - 0.5) * 0.05
   const cb = 8 + Math.cos(tick) * 3 + Math.random() * 2
 
@@ -65,7 +66,7 @@ const generateData = () => {
   }
 }
 
-// 初始化先填充一点数据
+// 初始化先填充数据，防止空白
 const initData = () => {
   for (let i = 0; i < MAX_POINTS; i++) {
     const d = generateData()
@@ -77,253 +78,171 @@ const initData = () => {
   }
 }
 
-// --- ECharts 配置 (双Grid核心) ---
-const updateChart = () => {
-  const option: echarts.EChartsOption = {
-    animation: false, // 实时图必须关动画
-    backgroundColor: 'transparent',
-
-    // 提示框：同时显示所有数据
-    tooltip: {
-      trigger: 'axis',
-      backgroundColor: 'rgba(0,0,0,0.85)',
-      borderColor: '#444',
-      textStyle: { color: '#eee', fontSize: 12 },
-      axisPointer: { type: 'line', lineStyle: { color: '#fff', type: 'dashed' } },
-      formatter: function (params: any) {
-        // 自定义 tooltip 格式
-        let html = `<div style="margin-bottom:5px;color:#aaa">${params[0].axisValue}</div>`
-        // 分组显示
-        html += `<div style="color:#74f2ce;font-weight:bold">Pack A:</div>`
-        html += `<div>Voltage: ${params[0].value} V</div>`
-        html += `<div>Current: ${params[1].value} A</div><br/>`
-
-        html += `<div style="color:#409eff;font-weight:bold">Pack B:</div>`
-        html += `<div>Voltage: ${params[2].value} V</div>`
-        html += `<div>Current: ${params[3].value} A</div>`
-        return html
-      }
-    },
-
-    // 核心：定义两个绘图区域 (Grid)
-    grid: [
-      // 上半部分：显示电压
-      {
-        left: '50', right: '20', top: '10%', height: '35%',
-        containLabel: false
-      },
-      // 下半部分：显示电流
-      {
-        left: '50', right: '20', top: '60%', height: '35%',
-        containLabel: false
-      }
-    ],
-
-    // 定义两个 X 轴
-    xAxis: [
-      {
-        gridIndex: 0, // 属于第一个 grid
-        type: 'category',
-        data: dataQueue.time,
-        axisLabel: { show: false }, // 上面的图不显示时间文字，为了省空间
-        axisTick: { show: false },
-        axisLine: { show: false },
-        boundaryGap: false
-      },
-      {
-        gridIndex: 1, // 属于第二个 grid
-        type: 'category',
-        data: dataQueue.time,
-        boundaryGap: false,
-        axisLine: { lineStyle: { color: '#333' } },
-        axisLabel: { color: '#666', fontSize: 10 }
-      }
-    ],
-
-    // 定义两个 Y 轴
-    yAxis: [
-      {
-        gridIndex: 0, // 电压轴
-        name: 'Voltage (V)',
-        nameTextStyle: { color: '#888', padding: [0, 0, 0, -30] },
-        type: 'value',
-        min: 3.0, max: 4.5, // 锁定电压范围
-        splitLine: { show: true, lineStyle: { color: '#1f1f1f' } },
-        axisLabel: { color: '#888' }
-      },
-      {
-        gridIndex: 1, // 电流轴
-        name: 'Current (A)',
-        nameTextStyle: { color: '#888', padding: [0, 0, 0, -30] },
-        type: 'value',
-        min: 0, max: 20, // 锁定电流范围
-        splitLine: { show: true, lineStyle: { color: '#1f1f1f' } },
-        axisLabel: { color: '#888' },
-        axisLabel: { formatter: '{value} A' }
-      }
-    ],
-
-    // 系列数据
-    series: [
-      // --- Pack A ---
-      {
-        name: 'PackA-V',
-        type: 'line',
-        xAxisIndex: 0, yAxisIndex: 0, // 放在上面
-        data: dataQueue.packA_V,
-        showSymbol: false,
-        smooth: true,
-        lineStyle: { width: 2, color: '#74f2ce' }, // 青色实线
-        areaStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(116, 242, 206, 0.2)' },
-            { offset: 1, color: 'rgba(116, 242, 206, 0)' }
-          ])
-        }
-      },
-      {
-        name: 'PackA-C',
-        type: 'line',
-        xAxisIndex: 1, yAxisIndex: 1, // 放在下面
-        data: dataQueue.packA_C,
-        showSymbol: false,
-        smooth: true,
-        lineStyle: { width: 2, color: '#74f2ce', type: 'dashed' } // 青色虚线代表电流
-      },
-
-      // --- Pack B ---
-      {
-        name: 'PackB-V',
-        type: 'line',
-        xAxisIndex: 0, yAxisIndex: 0, // 放在上面
-        data: dataQueue.packB_V,
-        showSymbol: false,
-        smooth: true,
-        lineStyle: { width: 2, color: '#409eff' } // 蓝色实线
-      },
-      {
-        name: 'PackB-C',
-        type: 'line',
-        xAxisIndex: 1, yAxisIndex: 1, // 放在下面
-        data: dataQueue.packB_C,
-        showSymbol: false,
-        smooth: true,
-        lineStyle: { width: 2, color: '#409eff', type: 'dashed' } // 蓝色虚线
-      }
-    ]
-  }
-  setOption(option)
-}
-
-// --- 实时循环 ---
+// --- 2. 实时更新循环 (关键修复点) ---
 const startLoop = () => {
   timer = setInterval(() => {
-    // 1. 生成新数据
+    // A. 生成
     const next = generateData()
 
-    // 2. 队列操作 (移除头，加入尾)
+    // B. 队列操作
     dataQueue.time.shift(); dataQueue.time.push(next.time)
     dataQueue.packA_V.shift(); dataQueue.packA_V.push(next.va)
     dataQueue.packA_C.shift(); dataQueue.packA_C.push(next.ca)
     dataQueue.packB_V.shift(); dataQueue.packB_V.push(next.vb)
     dataQueue.packB_C.shift(); dataQueue.packB_C.push(next.cb)
 
-    // 3. 增量更新图表
-    if (chartInstance.value) {
-      chartInstance.value.setOption({
-        xAxis: [
-          { data: dataQueue.time }, // 更新上X轴
-          { data: dataQueue.time }  // 更新下X轴
-        ],
-        series: [
-          { data: dataQueue.packA_V },
-          { data: dataQueue.packA_C },
-          { data: dataQueue.packB_V },
-          { data: dataQueue.packB_C }
-        ]
-      })
-    }
+    // C. 渲染 (修复报错：使用 ?. 确保实例存在才调用)
+    myChart.value?.setOption({
+      xAxis: [
+        { data: dataQueue.time },
+        { data: dataQueue.time }
+      ],
+      series: [
+        { data: dataQueue.packA_V },
+        { data: dataQueue.packA_C },
+        { data: dataQueue.packB_V },
+        { data: dataQueue.packB_C }
+      ]
+    })
   }, REFRESH_RATE)
 }
 
+// --- 3. 初始化图表 ---
+const initChart = () => {
+  if (!chartRef.value) return
+
+  myChart.value = echarts.init(chartRef.value)
+
+  const option: echarts.EChartsOption = {
+    backgroundColor: 'transparent',
+    animation: false, // 实时图必须关动画，否则卡顿
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(0,0,0,0.9)',
+      borderColor: '#333',
+      textStyle: { color: '#eee', fontSize: 12 },
+      axisPointer: { type: 'cross', label: { backgroundColor: '#6a7985' } },
+      formatter: (params: any) => {
+        let html = `<div style="margin-bottom:4px;color:#aaa;font-size:11px">${params[0].axisValue}</div>`
+        html += `<div style="display:flex;gap:20px;">`
+        // Left Column: Pack A
+        html += `<div><div style="color:#74f2ce;font-weight:bold;font-size:11px;margin-bottom:2px">PACK A</div>`
+        html += `<div>V: ${params[0].value} V</div>`
+        html += `<div>A: ${params[1].value} A</div></div>`
+        // Right Column: Pack B
+        html += `<div><div style="color:#409eff;font-weight:bold;font-size:11px;margin-bottom:2px">PACK B</div>`
+        html += `<div>V: ${params[2].value} V</div>`
+        html += `<div>A: ${params[3].value} A</div></div>`
+        html += `</div>`
+        return html
+      }
+    },
+    // 双 Grid 布局
+    grid: [
+      { left: 50, right: 20, top: '12%', height: '35%' }, // 上：电压
+      { left: 50, right: 20, top: '58%', height: '35%' }  // 下：电流
+    ],
+    xAxis: [
+      { gridIndex: 0, type: 'category', data: dataQueue.time, show: false, boundaryGap: false },
+      { gridIndex: 1, type: 'category', data: dataQueue.time, boundaryGap: false, axisLabel: { color: '#666', fontSize: 10 }, axisLine: { lineStyle: { color: '#333' } } }
+    ],
+    yAxis: [
+      { gridIndex: 0, name: 'VOLTAGE (V)', type: 'value', min: 3.0, max: 4.5, splitLine: { show: true, lineStyle: { color: '#222' } }, axisLabel: { color: '#888' } },
+      { gridIndex: 1, name: 'CURRENT (A)', type: 'value', min: 0, max: 25, splitLine: { show: true, lineStyle: { color: '#222' } }, axisLabel: { color: '#888' } }
+    ],
+    series: [
+      // Pack A
+      { name: 'AV', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: dataQueue.packA_V, showSymbol: false, smooth: true, lineStyle: { width: 2, color: '#74f2ce' }, areaStyle: { opacity: 0.1, color: '#74f2ce' } },
+      { name: 'AC', type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: dataQueue.packA_C, showSymbol: false, smooth: true, lineStyle: { width: 1, color: '#74f2ce', type: 'dashed' } },
+      // Pack B
+      { name: 'BV', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: dataQueue.packB_V, showSymbol: false, smooth: true, lineStyle: { width: 2, color: '#409eff' } },
+      { name: 'BC', type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: dataQueue.packB_C, showSymbol: false, smooth: true, lineStyle: { width: 1, color: '#409eff', type: 'dashed' } }
+    ]
+  }
+
+  myChart.value.setOption(option)
+}
+
+// --- 生命周期 ---
 onMounted(() => {
   initData()
   nextTick(() => {
-    updateChart()
+    initChart()
     startLoop()
+
+    // 自动 Resize 监听
+    if (chartRef.value) {
+      resizeObserver = new ResizeObserver(() => myChart.value?.resize())
+      resizeObserver.observe(chartRef.value)
+    }
   })
 })
 
 onUnmounted(() => {
   if (timer) clearInterval(timer)
+  if (resizeObserver) resizeObserver.disconnect()
+  myChart.value?.dispose()
 })
 </script>
 
 <style scoped>
-.bento-card {
+.central-card {
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: radial-gradient(circle at center, rgba(35,35,40,0.9) 0%, rgba(20,20,20,0.95) 100%);
+  /* 更酷炫的深色背景 */
+  background: radial-gradient(circle at center, #1f2029 0%, #101012 100%);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 0 20px rgba(0,0,0,0.6);
   border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
 }
 
-.header-left {
+/* 头部样式 */
+.card-header {
+  flex-shrink: 0;
+  height: 40px;
+  padding: 0 16px;
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  background: rgba(255,255,255,0.02);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 
-.card-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #fff;
-  letter-spacing: 0.5px;
-}
-
+.header-left { display: flex; align-items: center; gap: 10px; }
+.card-title { font-size: 14px; font-weight: 700; color: #eee; letter-spacing: 0.5px; }
 .live-tag {
-  font-size: 10px;
-  color: #ff453a;
-  background: rgba(255, 69, 58, 0.15);
-  padding: 2px 6px;
-  border-radius: 4px;
-  animation: blink 1s infinite;
+  font-size: 10px; color: #ff4d4f;
+  background: rgba(255, 77, 79, 0.15);
+  padding: 2px 6px; border-radius: 4px;
+  font-weight: bold;
+  animation: pulse 2s infinite;
 }
 
-.header-right {
-  display: flex;
-  align-items: center;
-}
+.legend-box { display: flex; gap: 12px; }
+.legend-item { font-size: 11px; color: #888; display: flex; align-items: center; gap: 4px; }
+.dot { width: 6px; height: 6px; border-radius: 50%; }
+.dot.pack-a { background: #74f2ce; box-shadow: 0 0 4px #74f2ce; }
+.dot.pack-b { background: #409eff; box-shadow: 0 0 4px #409eff; }
 
-.legend-box {
-  display: flex;
-  gap: 15px;
-  font-size: 12px;
-  color: #888;
-}
-
-.dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-right: 4px;
-}
-.dot.pack-a { background: #74f2ce; box-shadow: 0 0 5px #74f2ce; }
-.dot.pack-b { background: #409eff; box-shadow: 0 0 5px #409eff; }
-
-.chart-container {
-  flex: 1;
+/* 图表区域：关键修正 */
+.chart-wrapper {
+  flex: 1; /* 自动占据剩余高度 */
   width: 100%;
-  min-height: 250px;
+  min-height: 0; /* 防止溢出 */
+  position: relative;
 }
 
-@keyframes blink {
-  0% { opacity: 0.4; }
+.chart-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
   50% { opacity: 1; }
-  100% { opacity: 0.4; }
+  100% { opacity: 0.6; }
 }
 </style>

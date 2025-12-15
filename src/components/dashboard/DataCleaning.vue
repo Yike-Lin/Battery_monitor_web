@@ -186,14 +186,12 @@ onUnmounted(() => {
   height: 100%; /* 依赖父级高度 */
   display: flex;
   flex-direction: column;
-  background: radial-gradient(circle at bottom right, #25252b 0%, #151518 100%);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   overflow: hidden;
 }
 
 .card-header {
-  padding: 8px 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
