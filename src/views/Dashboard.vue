@@ -24,10 +24,20 @@
     </el-row>
 
     <!-- 底部设备表格 -->
-    <el-row>
-      <el-col :span="24" class="bottom-row">
-        <DeviceTableCard :table-data="tableData" />
+    <el-row :gutter="16" class="bottom-row-container">
+
+      <el-col :span="6" class="bottom-left">
+        <ICAnalysis />
       </el-col>
+
+      <el-col :span="12" class="bottom-center">
+        <CellMatrix :table-data="tableData" />
+      </el-col>
+
+      <el-col :span="6" class="bottom-right">
+        <DataCleaning />
+      </el-col>
+
     </el-row>
 
   </div>
@@ -41,7 +51,9 @@ import SocChart from '@/components/dashboard/SocChart.vue'
 import RishChart from '@/components/dashboard/RishChart.vue'
 import RulChart from '@/components/dashboard/RulChart.vue'
 import CentralMonitor from '@/components/dashboard/CentralMonitor.vue'
-import DeviceTableCard from '@/components/dashboard/DeviceTableCard.vue'
+import ICAnalysis from '@/components/dashboard/ICAnalysis.vue'
+import CellMatrix from '@/components/dashboard/CellMatrix.vue'
+import DataCleaning from '@/components/dashboard/DataCleaning.vue'
 
 
 const kpiList = ref([
@@ -87,14 +99,6 @@ const kpiList = ref([
     status: 'info'        // 提示性颜色
   }
 ])
-
-const tableData = ref([
-  { deviceNo: 'DEV-001', plateNo: '粤A·12345', soc: 82, voltage: 356, current: 120, temperature: 28, status: '在线', alarm: '—' },
-  { deviceNo: 'DEV-002', plateNo: '粤B·54321', soc: 15, voltage: 340, current: 180, temperature: 42, status: '告警', alarm: '电池温度过高' },
-  { deviceNo: 'DEV-003', plateNo: '粤C·88888', soc: 0, voltage: 0, current: 0, temperature: 0, status: '离线', alarm: '通信中断' },
-  { deviceNo: 'DEV-004', plateNo: '粤D·66666', soc: 65, voltage: 350, current: 80, temperature: 30, status: '在线', alarm: '—' },
-  { deviceNo: 'DEV-005', plateNo: '粤E·99999', soc: 98, voltage: 360, current: 10, temperature: 26, status: '在线', alarm: '—' },
-])
 </script>
 
 <style scoped>
@@ -110,7 +114,7 @@ const tableData = ref([
 /* 中间布局 */
 .middle-row {
   flex: 1;
-  min-height: 340px;
+  min-height: 0;
 }
 
 /* 左右列 */
@@ -119,28 +123,31 @@ const tableData = ref([
   flex-direction: column;
   gap: 16px;
   height: 100%;
-  min-width: 200px;
 }
 
 /* 中间列 */
 .center-col {
-  display: flex;
-  flex-direction: column;
   height: 100%;
 }
 
 /* 卡片高度 */
 .full-height-card {
-  flex: 1;
+  height: 100%;
 }
 
 .small-card {
   flex: 1;
+  min-height: 0;
 }
 
-/* 底部表格 */
-.bottom-row {
-  height: 280px;
+/* --- 底部行 (固定高度) --- */
+.bottom-row-container {
+  height: 250px; /* ❗给底部一个明确的高度，否则图表会变成 0px */
+  flex-shrink: 0; /* 防止被挤压 */
+}
+
+.bottom-item {
+  height: 100%; /* 让内部组件填满这 250px */
 }
 
 </style>
