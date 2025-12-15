@@ -6,7 +6,12 @@
 
       <div class="header-center">
         <span class="logo-icon">🔋</span>
-        <span class="app-title">电池运营监控系统</span>
+        <span class="app-title">
+          <el-link class="app-title" href="/admin/battery" underline={false} type="success">
+            Battery Monitor Web
+          </el-link>
+
+        </span>
         <span class="logo-icon">🪫</span>
       </div>
 
@@ -54,6 +59,7 @@
   }
 
   .app-title {
+    color: #fff;
     font-size: 30px;
     font-weight: 600;
     letter-spacing: 2px;

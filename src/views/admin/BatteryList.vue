@@ -62,8 +62,8 @@
           >
             <el-table-column prop="id" label="ID" width="70" />
             <el-table-column prop="name" label="电池名称" min-width="150" />
-            <el-table-column prop="station" label="所属站点" min-width="140" />
-            <el-table-column prop="soc" label="SOC(%)" width="90" />
+            <el-table-column prop="station" label="充电策略" min-width="140" />
+            <el-table-column prop="soc" label="SOH(%)" width="90" />
             <el-table-column prop="temperature" label="温度(℃)" width="90" />
             <el-table-column label="状态" width="110">
               <template #default="{ row }">
@@ -122,7 +122,7 @@
           <el-form-item label="电池名称">
             <el-input v-model="editForm.name" />
           </el-form-item>
-          <el-form-item label="所属站点">
+          <el-form-item label="充电策略">
             <el-input v-model="editForm.station" />
           </el-form-item>
           <el-form-item label="SOC(%)">
@@ -187,7 +187,7 @@
     {
       id: 1,
       name: '电池组-001',
-      station: '广州 · 白云站',
+      station: 'Batch-1',
       soc: 87,
       temperature: 32.5,
       status: 'online',
@@ -196,7 +196,7 @@
     {
       id: 2,
       name: '电池组-002',
-      station: '佛山 · 南海站',
+      station: 'Batch-2',
       soc: 45,
       temperature: 40.2,
       status: 'alarm',
@@ -205,7 +205,27 @@
     {
       id: 3,
       name: '电池组-003',
-      station: '广州 · 黄埔站',
+      station: 'Batch-3',
+      soc: 0,
+      temperature: 25.0,
+      status: 'offline',
+      updatedAt: '2025-12-09 22:01:37',
+    },
+    {
+      id: 3,
+      name: '电池组-003',
+      station: 'Batch-3',
+      soc: 0,
+      temperature: 25.0,
+      status: 'offline',
+      updatedAt: '2025-12-09 22:01:37',
+    },
+
+
+    {
+      id: 3,
+      name: '电池组-003',
+      station: 'Batch-4',
       soc: 0,
       temperature: 25.0,
       status: 'offline',
@@ -214,7 +234,7 @@
         {
       id: 3,
       name: '电池组-003',
-      station: '广州 · 黄埔站',
+      station: 'Batch-1',
       soc: 0,
       temperature: 25.0,
       status: 'offline',
@@ -223,7 +243,7 @@
         {
       id: 3,
       name: '电池组-003',
-      station: '广州 · 黄埔站',
+      station: 'Batch-3',
       soc: 0,
       temperature: 25.0,
       status: 'offline',
@@ -232,7 +252,7 @@
         {
       id: 3,
       name: '电池组-003',
-      station: '广州 · 黄埔站',
+      station: 'Batch-6',
       soc: 0,
       temperature: 25.0,
       status: 'offline',
@@ -241,16 +261,34 @@
         {
       id: 3,
       name: '电池组-003',
-      station: '广州 · 黄埔站',
+      station: 'Batch-3',
       soc: 0,
       temperature: 25.0,
       status: 'offline',
       updatedAt: '2025-12-09 22:01:37',
     },
-        {
+    {
       id: 3,
       name: '电池组-003',
-      station: '广州 · 黄埔站',
+      station: 'Batch-3',
+      soc: 0,
+      temperature: 25.0,
+      status: 'offline',
+      updatedAt: '2025-12-09 22:01:37',
+    },
+    {
+      id: 3,
+      name: '电池组-003',
+      station: 'Batch-3',
+      soc: 0,
+      temperature: 25.0,
+      status: 'offline',
+      updatedAt: '2025-12-09 22:01:37',
+    },
+    {
+      id: 3,
+      name: '电池组-003',
+      station: 'Batch-3',
       soc: 0,
       temperature: 25.0,
       status: 'offline',
