@@ -1,127 +1,190 @@
 <template>
-  <div class="admin-shell">
-    <!-- 左侧侧边栏 -->
-    <AdminSidebar />
+  <el-container class="layout-wrapper dark-theme">
+    <el-aside width="230px" class="layout-sidebar">
 
-    <!-- 右侧主体 -->
-    <div class="admin-main-column">
-      <header class="admin-header">
+      <el-menu
+        :default-active="activeMenu"
+        class="sidebar-menu"
+        background-color="transparent"
+        text-color="#a6a6a6"
+        active-text-color="#ffffff"
+        router
+      >
+        <el-menu-item index="/dashboard">
+          <el-icon><Monitor /></el-icon>
+          <span>运行大屏</span>
+        </el-menu-item>
+
+        <el-menu-item index="/battery">
+          <el-icon><Files /></el-icon> <span>电池管理</span>
+        </el-menu-item>
+      </el-menu>
+    </el-aside>
+
+    <el-container>
+      <el-header class="layout-header">
         <div class="header-left">
-          <span class="header-title">{{ currentTitle }}</span>
-          <span class="header-sub">{{ route.path }}</span>
+          <el-breadcrumb separator="/">
+            <el-breadcrumb-item><span class="breadcrumb-text">首页</span></el-breadcrumb-item>
+            <el-breadcrumb-item><span class="breadcrumb-text active">电池管理</span></el-breadcrumb-item>
+          </el-breadcrumb>
         </div>
 
         <div class="header-right">
-          <span class="header-chip status">运行中</span>
-          <span class="header-chip env">生产环境</span>
+          <el-icon class="action-icon"><Search /></el-icon>
+          <el-icon class="action-icon"><FullScreen /></el-icon>
+          <el-icon class="action-icon"><Bell /></el-icon>
         </div>
-      </header>
+      </el-header>
 
-      <main class="admin-main">
-        <router-view />
-      </main>
-    </div>
-  </div>
+      <div class="tags-view">
+        <span class="tag-item">首页</span>
+        <span class="tag-item active">电池管理</span>
+      </div>
+
+      <el-main class="layout-main">
+        <div class="empty-placeholder">
+          <router-view /> 
+        </div>
+      </el-main>
+    </el-container>
+  </el-container>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
-import AdminSidebar from '../components/admin/AdminSidebar.vue'
+import { ref } from 'vue'
+import { Monitor, Files, Search, FullScreen, Bell } from '@element-plus/icons-vue'
 
-const route = useRoute()
-const currentTitle = computed(() => (route.meta.title as string) || '后台管理')
+// 模拟当前选中的菜单项，为了还原图片效果，默认选中“电池管理”
+const activeMenu = ref('/battery')
 </script>
 
 <style scoped>
-.admin-shell {
-  height: 100%;
-  width: 100%;
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 14px;
-  padding: 4px 4px 10px 4px;
-  box-sizing: border-box;
-}
-
-/* 右侧整体 */
-.admin-main-column {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  border-radius: 22px;
-  background:  rgba(9, 10, 16, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow:
-    0 18px 45px rgba(0, 0, 0, 0.85),
-    0 0 0 1px rgba(0, 0, 0, 0.7);
+/* --- 全局深色变量 --- */
+.layout-wrapper {
+  height: 100vh;
+  width: 100vw;
+  background-color: #0d0d0d; /* 整体极黑背景 */
+  color: #cfd3dc;
   overflow: hidden;
 }
 
-/* 顶部条 */
-.admin-header {
-  flex-shrink: 0;
-  height: 52px;
+/* --- 1. 侧边栏样式 --- */
+.layout-sidebar {
+  background-color: #141414; /* 侧边栏背景 */
+  border-right: 1px solid #1f1f1f;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Logo */
+.sidebar-logo {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  padding-left: 20px;
+  gap: 10px;
+}
+.logo-icon { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; }
+.drop-shape {
+  width: 20px; height: 20px;
+  background: linear-gradient(135deg, #2d8cf0 0%, #74b9ff 100%);
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+}
+.logo-text {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+}
+
+/* 菜单项 */
+.sidebar-menu {
+  border-right: none;
+  padding: 10px;
+  margin-top: 5px;
+}
+
+:deep(.el-menu-item) {
+  height: 44px;
+  line-height: 44px;
+  margin-bottom: 4px;
+  border-radius: 6px;
+  color: #a6a6a6;
+}
+
+:deep(.el-menu-item:hover) {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  color: #fff;
+}
+
+/* 【关键复刻】选中项样式：墨绿色背景 */
+:deep(.el-menu-item.is-active) {
+  background-color: #3a5f50 !important; /* 复刻图片的绿色 */
+  color: #ffffff !important;
+  font-weight: 500;
+}
+
+/* --- 2. Header 样式 --- */
+.layout-header {
+  height: 48px;
+  background-color: #141414;
+  border-bottom: 1px solid #1f1f1f;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background:rgba(30, 30, 30, 0.6);
-  color: #f5f5f7;
+  padding: 0 20px;
 }
 
-.header-left {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
+.breadcrumb-text { color: #666; font-size: 14px; }
+.breadcrumb-text.active { color: #fff; }
 
-.header-title {
-  font-size: 20px;
-  font-weight: 600;
-}
+.header-right { display: flex; align-items: center; gap: 15px; }
+.action-icon { font-size: 18px; cursor: pointer; color: #a6a6a6; }
+.action-icon:hover { color: #fff; }
+.user-info { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.username { font-size: 14px; color: #fff; }
 
-.header-sub {
-  font-size: 15px;
-  color: #8e8e93;
-}
-
-.header-right {
+/* --- 3. Tags View 样式 --- */
+.tags-view {
+  height: 34px;
+  background-color: #141414; /* 深色背景 */
+  border-bottom: 1px solid #1f1f1f;
   display: flex;
   align-items: center;
-  gap: 8px;
+  padding: 0 10px;
+  gap: 6px;
+}
+
+.tag-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  padding: 0 10px;
   font-size: 12px;
+  color: #a6a6a6;
+  border: 1px solid #333;
+  border-radius: 2px;
+  cursor: pointer;
+  background: #1d1e1f;
 }
 
-.header-chip {
-  padding: 3px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+/* 选中标签：图片中是亮蓝色 */
+.tag-item.active {
+  background-color: #409eff; 
+  color: #fff;
+  border-color: #409eff;
 }
 
-.header-chip.status {
-  background: rgba(48, 209, 88, 0.12);
-  color: #30d158;
-  border-color: rgba(48, 209, 88, 0.4);
+/* --- 4. Main 区域 --- */
+.layout-main {
+  background-color: #0d0d0d; /* 极黑内容背景 */
+  padding: 20px;
 }
-
-.header-chip.env {
-  background: rgba(10, 132, 255, 0.12);
-  color: #0a84ff;
-  border-color: rgba(10, 132, 255, 0.5);
-}
-
-.header-user {
-  color: #c7c7cc;
-}
-
-/* 内容区域 */
-.admin-main {
-  flex: 1;
-  min-height: 0;
-  padding: 14px 16px 16px;
-  box-sizing: border-box;
-  overflow: auto;
+.empty-placeholder {
+  width: 100%;
+  height: 100%;
+  /* 可以在这里放空的 router-view */
 }
 </style>
