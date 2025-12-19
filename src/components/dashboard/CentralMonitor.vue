@@ -22,6 +22,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, shallowRef, nextTick } from 'vue'
 import * as echarts from 'echarts'
+import axios from 'axios'
 
 // --- 核心状态 ---
 const chartRef = ref<HTMLElement | null>(null)
@@ -31,7 +32,7 @@ let resizeObserver: ResizeObserver | null = null
 
 // --- 配置参数 ---
 const MAX_POINTS = 60
-const REFRESH_RATE = 200 // 200ms 刷新一次
+const REFRESH_RATE = 500 // 500ms 刷新一次
 
 // --- 数据队列 ---
 const dataQueue = {
@@ -42,56 +43,45 @@ const dataQueue = {
   packB_C: [] as number[]
 }
 
-let tick = 0
-
-// --- 1. 数据生成逻辑 ---
-const generateData = () => {
-  tick += 0.2
-  const now = new Date().toLocaleTimeString().replace(/^\D*/, '') // 只留时间
-
-  // 模拟 Pack A (电压3.8V基准)
-  const va = 3.8 + Math.sin(tick) * 0.1 + (Math.random() - 0.5) * 0.05
-  const ca = 12 + Math.cos(tick * 1.5) * 5 + Math.random() * 2
-
-  // 模拟 Pack B (电压3.65V基准)
-  const vb = 3.65 + Math.sin(tick + 2) * 0.15 + (Math.random() - 0.5) * 0.05
-  const cb = 8 + Math.cos(tick) * 3 + Math.random() * 2
-
-  return {
-    time: now,
-    va: Number(va.toFixed(3)),
-    ca: Number(ca.toFixed(2)),
-    vb: Number(vb.toFixed(3)),
-    cb: Number(cb.toFixed(2))
+const fetchRealData = async () => {
+  try {
+    // 假设 Pack A 是 b1c0，Pack B 是 b1c1
+    const res = await axios.get('http://localhost:8080/api/battery/stream?idA=b1c0&idB=b1c1')
+    return res.data // 直接返回后端给的 { time, va, ca, vb, cb }
+  } catch (err) {
+    console.error("Fetch error:", err)
+    // 出错时返回个空数据防止炸裂
+    return { time: new Date().toLocaleTimeString(), va: 0, ca: 0, vb: 0, cb: 0 }
   }
 }
 
-// 初始化先填充数据，防止空白
+// 初始化填空数据
 const initData = () => {
   for (let i = 0; i < MAX_POINTS; i++) {
-    const d = generateData()
-    dataQueue.time.push(d.time)
-    dataQueue.packA_V.push(d.va)
-    dataQueue.packA_C.push(d.ca)
-    dataQueue.packB_V.push(d.vb)
-    dataQueue.packB_C.push(d.cb)
+    dataQueue.time.push('')
+    dataQueue.packA_V.push(0)
+    dataQueue.packA_C.push(0)
+    dataQueue.packB_V.push(0)
+    dataQueue.packB_C.push(0)
   }
 }
 
 // --- 2. 实时更新循环 (关键修复点) ---
 const startLoop = () => {
-  timer = setInterval(() => {
-    // A. 生成
-    const next = generateData()
+  timer = setInterval(async () => {
+    // A. 请求真实数据
+    const next = await fetchRealData()
 
-    // B. 队列操作
+    // B. 队列操作 (逻辑不变)
     dataQueue.time.shift(); dataQueue.time.push(next.time)
-    dataQueue.packA_V.shift(); dataQueue.packA_V.push(next.va)
-    dataQueue.packA_C.shift(); dataQueue.packA_C.push(next.ca)
-    dataQueue.packB_V.shift(); dataQueue.packB_V.push(next.vb)
-    dataQueue.packB_C.shift(); dataQueue.packB_C.push(next.cb)
 
-    // C. 渲染 (修复报错：使用 ?. 确保实例存在才调用)
+    // 如果后端返回 null (没数据), 赋 0 或者保持上一个值
+    dataQueue.packA_V.shift(); dataQueue.packA_V.push(next.va || 0)
+    dataQueue.packA_C.shift(); dataQueue.packA_C.push(next.ca || 0)
+    dataQueue.packB_V.shift(); dataQueue.packB_V.push(next.vb || 0)
+    dataQueue.packB_C.shift(); dataQueue.packB_C.push(next.cb || 0)
+
+    // C. 渲染
     myChart.value?.setOption({
       xAxis: [
         { data: dataQueue.time },
@@ -115,7 +105,9 @@ const initChart = () => {
 
   const option: echarts.EChartsOption = {
     backgroundColor: 'transparent',
-    animation: false, // 实时图必须关动画，否则卡顿
+
+    animation: false, // 开启动画
+
     tooltip: {
       trigger: 'axis',
       backgroundColor: 'rgba(0,0,0,0.9)',
@@ -146,9 +138,10 @@ const initChart = () => {
       { gridIndex: 0, type: 'category', data: dataQueue.time, show: false, boundaryGap: false },
       { gridIndex: 1, type: 'category', data: dataQueue.time, boundaryGap: false, axisLabel: { color: '#666', fontSize: 10 }, axisLine: { lineStyle: { color: '#333' } } }
     ],
+    // , min: 3.0, max: 4.5   , min: 0, max: 25
     yAxis: [
-      { gridIndex: 0, name: 'VOLTAGE (V)', type: 'value', min: 3.0, max: 4.5, splitLine: { show: true, lineStyle: { color: '#222' } }, axisLabel: { color: '#888' } },
-      { gridIndex: 1, name: 'CURRENT (A)', type: 'value', min: 0, max: 25, splitLine: { show: true, lineStyle: { color: '#222' } }, axisLabel: { color: '#888' } }
+      { gridIndex: 0, name: 'VOLTAGE (V)', type: 'value', scale: true, splitLine: { show: true, lineStyle: { color: '#222' } }, axisLabel: { color: '#888' } },
+      { gridIndex: 1, name: 'CURRENT (A)', type: 'value', scale: true, splitLine: { show: true, lineStyle: { color: '#222' } }, axisLabel: { color: '#888' } }
     ],
     series: [
       // Pack A
