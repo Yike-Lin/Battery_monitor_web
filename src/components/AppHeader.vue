@@ -7,7 +7,7 @@
       <div class="header-center">
         <span class="logo-icon">🔋</span>
         <span class="app-title">
-          <el-link class="app-title" href="/admin/battery" underline={false} type="success">
+          <el-link class="app-title" href="/admin/battery-ledger" underline={false} type="success">
             Battery Monitor Web
           </el-link>
 

@@ -42,7 +42,7 @@ defineProps<{ kpiList: KpiItem[] }>()
   gap: 14px;
   height: 100px;
   width: 100%;
-  margin-top: -20px;
+  margin-top: -5px;
 }
 
 .bento-card {

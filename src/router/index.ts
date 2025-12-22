@@ -18,25 +18,30 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/admin',
     component: () => import('../layouts/AdminLayout.vue'),
-    redirect: '/admin/battery',
+    redirect: '/admin/battery-ledger',
     children: [
+      // 资产管理 - 电池台账列表
       {
-        path: 'battery',
-        name: 'AdminBattery',
-        component: () => import('../views/admin/BatteryList.vue'),
-        meta: { title: '电池管理' },
+        path: 'battery-ledger',
+        name: 'BatteryLedger',
+        component: () => import('../views/admin/BatteryLedger.vue'),
+        meta: { title: '电池台账列表', group: '资产管理' },
       },
+
+      // 资产管理 - 单体电池详情
       {
-        path: 'device',
-        name: 'AdminDevice',
-        component: () => import('../views/admin/DeviceList.vue'),
-        meta: { title: '设备管理' },
+        path: 'cell-detail/:packId',
+        name: 'CellDetail',
+        component: () => import('../views/admin/CellDetail.vue'),
+        meta: { title: '单体电池详情', group: '资产管理' },
       },
+
+      // 资产管理 - 拓扑结构管理
       {
-        path: 'user',
-        name: 'AdminUser',
-        component: () => import('../views/admin/UserList.vue'),
-        meta: { title: '用户管理' },
+        path: 'topology',
+        name: 'TopologyManager',
+        component: () => import('../views/admin/TopologyManager.vue'),
+        meta: { title: '拓扑结构管理', group: '资产管理' },
       },
     ],
   },
