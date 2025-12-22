@@ -18,7 +18,7 @@
         <el-sub-menu index="/admin/assets">
           <template #title>
             <el-icon><Files /></el-icon>
-            <span>资产管理</span>
+            <span>电池管理</span>
           </template>
 
           <el-menu-item index="/admin/battery-ledger">
@@ -42,7 +42,7 @@
         <div class="header-left">
           <el-breadcrumb separator="/">
             <el-breadcrumb-item><span class="breadcrumb-text">首页</span></el-breadcrumb-item>
-            <el-breadcrumb-item><span class="breadcrumb-text">资产管理</span></el-breadcrumb-item>
+            <el-breadcrumb-item><span class="breadcrumb-text">电池管理</span></el-breadcrumb-item>
             <el-breadcrumb-item>
               <span class="breadcrumb-text active">{{ pageTitle }}</span>
             </el-breadcrumb-item>
