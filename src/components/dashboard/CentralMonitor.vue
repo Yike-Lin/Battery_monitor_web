@@ -46,7 +46,7 @@ const dataQueue = {
 const fetchRealData = async () => {
   try {
     // 假设 Pack A 是 b1c0，Pack B 是 b1c1
-    const res = await axios.get('http://localhost:8080/api/battery/stream?idA=b1c0&idB=b1c1')
+    const res = await axios.get('http://localhost:8080/api/battery-dashboard/stream?idA=b1c0&idB=b1c1')
     return res.data // 直接返回后端给的 { time, va, ca, vb, cb }
   } catch (err) {
     console.error("Fetch error:", err)

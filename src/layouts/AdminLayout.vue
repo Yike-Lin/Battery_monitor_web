@@ -25,7 +25,7 @@
             <span>电池台账列表</span>
           </el-menu-item>
 
-          <!-- 详情页一般从台账列表进入；这里放一个演示入口 -->
+          
           <el-menu-item :index="`/admin/cell-detail/${demoPackId}`">
             <span>单体电池详情</span>
           </el-menu-item>
