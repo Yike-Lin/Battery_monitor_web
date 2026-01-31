@@ -2,7 +2,7 @@
   <div class="page">
     <!-- 顶部筛选 -->
     <div class="toolbar">
-      <el-form :inline="true" class="filter" @submit.prevent>
+      <el-form :inline="true" class="filter filter-dark" @submit.prevent>
         <el-form-item label="ID">
           <el-input v-model="q.id" placeholder="如：XJTU-B001" clearable />
         </el-form-item>
@@ -74,6 +74,7 @@
         <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="onEditClick(row)">编辑</el-button>
+            <el-button link type="danger" @click="onDeleteClick(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -102,7 +103,7 @@
 
 <script setup lang="ts">
 import { reactive, ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage , ElMessageBox } from 'element-plus'
 import axios from 'axios'
 import BatteryFormDialog, { type BatteryForm } from '@/components/admin/BatteryFormDialog.vue'
 
@@ -239,6 +240,26 @@ function onEditClick(row: BatteryListItemDto) {
   dialogVisible.value = true
 }
 
+async function onDeleteClick(row: BatteryListItemDto) {
+  try {
+    await ElMessageBox.confirm(
+      `确认删除电池【${row.batteryCode}】吗？`,
+      '提示',
+      {
+        type: 'warning',
+        confirmButtonText: '删除',
+        cancelButtonText: '取消',
+      }
+    )
+
+    await axios.delete(`/api/batteries/${row.id}`)
+    ElMessage.success('已删除')
+    doQuery()
+  } catch {
+    // 取消
+  }
+}
+
 // 收到子组件的保存事件后，调用后端接口
 async function handleSave(form: BatteryForm) {
   const payload = {
@@ -278,11 +299,87 @@ async function handleSave(form: BatteryForm) {
 .soh.mid { color: #e6a23c; }
 .soh.bad { color: #909399; }
 
-:deep(.el-table) { background-color: transparent; color: #cfd3dc; }
-:deep(.el-table th.el-table__cell) { background: #141414; color: #cfd3dc; }
-:deep(.el-table tr) { background: #141414; }
-:deep(.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell) {
-  background: #121212;
+/* 表格整体深色风格 */
+:deep(.el-table) {
+  background-color: transparent;
+  color: #cfd3dc;
 }
-:deep(.el-table td.el-table__cell) { border-bottom: 1px solid #1f1f1f; }
+
+/* 表头 */
+:deep(.el-table th.el-table__cell) {
+  background: #141414;
+  color: #cfd3dc;
+}
+
+/* 普通行背景 */
+:deep(.el-table tr) {
+  background: #141414;
+}
+
+/* 斑马纹行背景，稍微深一点 */
+:deep(.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell) {
+  background: #161616;
+}
+
+/* 去掉 hover 高亮（改成接近原来的深色） */
+:deep(.el-table__body tr:hover > td) {
+  background-color: #1a1a1a !important;
+}
+
+/* 单元格边框 */
+:deep(.el-table td.el-table__cell) {
+  border-bottom: 1px solid #1f1f1f;
+}
+
+/* ========== 顶部筛选表单：只在 .filter-dark 内生效 ========== */
+
+/* el-input 深色 */
+:deep(.filter-dark .el-input .el-input__wrapper) {
+  background-color: #1c1c1c;
+  box-shadow: 0 0 0 1px #303030 inset;
+  color: #cfd3dc;
+}
+
+/* input 的 placeholder 颜色 */
+:deep(.filter-dark .el-input__inner::placeholder) {
+  color: #555;
+}
+
+/* 聚焦时边框颜色稍微高亮一点 */
+:deep(.filter-dark .el-input.is-focus .el-input__wrapper),
+:deep(.filter-dark .el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 1px #409eff inset;
+}
+
+/* el-select 深色 */
+:deep(.filter-dark .el-select .el-select__wrapper) {
+  background-color: #1c1c1c;
+  box-shadow: 0 0 0 1px #303030 inset;
+  color: #cfd3dc;
+}
+
+/* el-select placeholder */
+:deep(.filter-dark .el-select .el-select__placeholder) {
+  color: #555;
+}
+
+/* el-date-picker 深色（输入框部分） */
+:deep(.filter-dark .el-date-editor.el-input__wrapper) {
+  background-color: #1c1c1c;
+  box-shadow: 0 0 0 1px #303030 inset;
+  color: #cfd3dc;
+}
+
+/* 日期文字和 placeholder */
+:deep(.filter-dark .el-date-editor .el-input__inner) {
+  color: #cfd3dc;
+}
+:deep(.filter-dark .el-date-editor .el-input__inner::placeholder) {
+  color: #555;
+}
+
+/* 顶部筛选项标签颜色 */
+:deep(.filter-dark .el-form-item__label) {
+  color: #cfd3dc;
+}
 </style>
