@@ -19,7 +19,11 @@
       </el-form-item>
 
       <el-form-item label="投运日期">
-        <el-date-picker v-model="form.commissioningDate" type="date" value-format="YYYY-MM-DD" />
+        <el-date-picker
+          v-model="form.commissioningDate"
+          type="date"
+          value-format="YYYY-MM-DD"
+        />
       </el-form-item>
 
       <el-form-item label="所属客户">
@@ -54,6 +58,11 @@
         </span>
       </el-form-item>
 
+      <!-- 只显示当前选择的 CSV 文件名 -->
+      <el-form-item v-if="csvFileName" label="当前文件">
+        <span>{{ csvFileName }}</span>
+      </el-form-item>
+
       <el-form-item label="SOH(%)">
         <el-input-number v-model="form.sohPercent" :min="0" :max="120" :step="0.1" />
       </el-form-item>
@@ -79,7 +88,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
 
@@ -130,12 +139,17 @@ const form = reactive<BatteryForm>({
   lastRecordAt: formatNow(),
 })
 
+// 当前选择的 CSV 文件名
+const csvFileName = ref<string>('')
+
 // 当父组件传入 initialForm 时，同步到内部 form
 watch(
   () => props.initialForm,
   (val) => {
     if (!val) return
     Object.assign(form, val)
+    // 打开弹窗时清空文件名（不回显旧文件）
+    csvFileName.value = ''
   },
   { immediate: true },
 )
@@ -156,13 +170,18 @@ function close() {
 }
 
 function onClosed() {
-  // 关闭时可以做一些重置操作，如果你需要的话
+  // 关闭时重置文件名（可选）
+  csvFileName.value = ''
 }
 
 // 上传 CSV → 调用 /api/batteries/upload
 async function handleCsvUpload(option: any) {
+  const file: File = option.file
+  // 更新文件名显示
+  csvFileName.value = file.name
+
   const formData = new FormData()
-  formData.append('file', option.file)
+  formData.append('file', file)
 
   try {
     const resp = await axios.post('/api/batteries/upload', formData, {
@@ -183,7 +202,7 @@ async function handleCsvUpload(option: any) {
     form.uploadToken = draft.uploadToken
 
     ElMessage.success('CSV 解析成功')
-    option.onSuccess && option.onSuccess(null, option.file)
+    option.onSuccess && option.onSuccess(null, file)
   } catch (e) {
     console.error(e)
     ElMessage.error('CSV 解析失败')
@@ -196,7 +215,6 @@ function onSaveClick() {
     ElMessage.warning('请填写 ID 和投运日期')
     return
   }
-  // 把当前 form 通过事件抛给父组件，让父决定调用哪个接口
   emit('save', { ...form })
 }
 </script>
