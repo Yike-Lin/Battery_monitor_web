@@ -278,21 +278,28 @@ async function handleSave(form: BatteryForm) {
   // // 新增：统一调用 POST /api/batteries
   // await axios.post('/api/batteries', payload)
 
-if (dialogMode.value === 'create') {
-    // 新增
-    await axios.post('/api/batteries', payload)
-  } else {
-    // 编辑
-    if (!form.id) {
-      ElMessage.error('缺少电池ID，无法编辑')
-      return
+try {
+    if (dialogMode.value === 'create') {
+      await axios.post('/api/batteries', payload)
+    } else {
+      if (!form.id) {
+        ElMessage.error('缺少电池ID，无法编辑')
+        return
+      }
+      await axios.put(`/api/batteries/${form.id}`, payload)
     }
-    await axios.put(`/api/batteries/${form.id}`, payload)
-  }
 
-  ElMessage.success('已保存')
-  dialogVisible.value = false
-  doQuery()
+    ElMessage.success('已保存')
+    dialogVisible.value = false
+    doQuery()
+  } catch (error: any) {
+    if (error.response) {
+      const msg = error.response.data || '保存失败'
+      ElMessage.error(msg)
+    } else {
+      ElMessage.error('网络异常或服务器错误')
+    }
+  }
 }
 </script>
 
