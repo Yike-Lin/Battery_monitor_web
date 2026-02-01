@@ -260,9 +260,10 @@ async function onDeleteClick(row: BatteryListItemDto) {
   }
 }
 
-// 收到子组件的保存事件后，调用后端接口
+// 收到子组件的保存事件后，调后端接口
 async function handleSave(form: BatteryForm) {
   const payload = {
+    // id: from.id,
     batteryCode: form.batteryCode,
     modelCode: form.modelCode,
     customerName: form.customerName,
@@ -274,8 +275,20 @@ async function handleSave(form: BatteryForm) {
     lastRecordAt: form.lastRecordAt,
   }
 
-  // 当前只实现新增：统一调用 POST /api/batteries
-  await axios.post('/api/batteries', payload)
+  // // 新增：统一调用 POST /api/batteries
+  // await axios.post('/api/batteries', payload)
+
+if (dialogMode.value === 'create') {
+    // 新增
+    await axios.post('/api/batteries', payload)
+  } else {
+    // 编辑
+    if (!form.id) {
+      ElMessage.error('缺少电池ID，无法编辑')
+      return
+    }
+    await axios.put(`/api/batteries/${form.id}`, payload)
+  }
 
   ElMessage.success('已保存')
   dialogVisible.value = false
