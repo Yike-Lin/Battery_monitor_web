@@ -69,7 +69,13 @@
           </template>
         </el-table-column>
         <el-table-column prop="cycleCount" label="循环数" width="90" />
-        <el-table-column prop="lastRecordAt" label="最近记录" min-width="170" />
+        <el-table-column label="最近记录" min-width="170">
+          <template #default="{ row }">
+            <span :class="['time', !row.lastRecordAt ? 'muted' : '']">
+              {{ formatLastRecordAtForDisplay(row.lastRecordAt) }}
+            </span>
+          </template>
+        </el-table-column>
 
         <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
@@ -167,6 +173,20 @@ function formatNow(): string {
   const mi = String(d.getMinutes()).padStart(2, '0')
   const ss = String(d.getSeconds()).padStart(2, '0')
   return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`
+}
+
+// lastRecordAt格式判断
+function formatLastRecordAtForDisplay(v: string | null): string {
+  if (!v) return '—'
+  // ISO: 2026-02-02T19:04:44.777+08:00
+  // 取前 19 位 = 2026-02-02T19:04:44，然后把 T 换成空格
+  if (v.includes('T') && v.length >= 19) {
+    return v.slice(0, 19).replace('T', ' ')
+  }
+  // 已经是 yyyy-MM-dd HH:mm:ss 的情况，兜底再裁一下
+  if (v.length >= 19) return v.slice(0, 19)
+
+  return v
 }
 
 // 列表查询
@@ -318,6 +338,11 @@ try {
 .soh.good { color: #67c23a; }
 .soh.mid { color: #e6a23c; }
 .soh.bad { color: #909399; }
+
+.time {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.2px;
+}
 
 /* 表格整体深色风格 */
 :deep(.el-table) {
