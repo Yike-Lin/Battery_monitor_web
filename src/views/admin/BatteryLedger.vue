@@ -79,6 +79,7 @@
 
         <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
+            <el-button link type="primary" @click="onViewDetailClick(row)">查看详情</el-button>
             <el-button link type="primary" @click="onEditClick(row)">编辑</el-button>
             <el-button link type="danger" @click="onDeleteClick(row)">删除</el-button>
           </template>
@@ -109,9 +110,12 @@
 
 <script setup lang="ts">
 import { reactive, ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage , ElMessageBox } from 'element-plus'
 import axios from 'axios'
 import BatteryFormDialog, { type BatteryForm } from '@/components/admin/BatteryFormDialog.vue'
+
+const router = useRouter()
 
 type Status = 'in_service' | 'maintenance' | 'retired'
 
@@ -243,6 +247,13 @@ function onCreateClick() {
   dialogVisible.value = true
 }
 
+function onViewDetailClick(row: BatteryListItemDto) {
+  router.push({
+    name: 'CellDetail',
+    params: { batteryId: row.id },
+  })
+}
+
 function onEditClick(row: BatteryListItemDto) {
   dialogMode.value = 'edit'
   dialogForm.value = {
@@ -282,8 +293,7 @@ async function onDeleteClick(row: BatteryListItemDto) {
 
 // 收到子组件的保存事件后，调后端接口
 async function handleSave(form: BatteryForm) {
-  const payload = {
-    // id: from.id,
+const payload = {
     batteryCode: form.batteryCode,
     modelCode: form.modelCode,
     customerName: form.customerName,
@@ -293,12 +303,10 @@ async function handleSave(form: BatteryForm) {
     sohPercent: form.sohPercent,
     cycleCount: form.cycleCount,
     lastRecordAt: form.lastRecordAt,
+    uploadToken: form.uploadToken || null,   // 关键：把 token 传给后端
   }
 
-  // // 新增：统一调用 POST /api/batteries
-  // await axios.post('/api/batteries', payload)
-
-try {
+  try {
     if (dialogMode.value === 'create') {
       await axios.post('/api/batteries', payload)
     } else {
