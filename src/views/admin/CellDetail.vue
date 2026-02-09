@@ -1,73 +1,99 @@
 <template>
   <div class="page">
     <!-- 顶部信息 -->
-    <el-card class="card" shadow="never">
-      <div class="pack-head">
-        <div class="title">
-          <div class="name">单体电池详情：{{ batteryId }}</div>
-          <div class="sub muted">
-            {{ packMetaText }}
-          </div>
-        </div>
+    <el-card class="card compact-header" shadow="never">
 
-        <div class="right">
-          <el-button @click="back">返回台账</el-button>
-          <el-button type="primary" @click="refresh">刷新</el-button>
-        </div>
-      </div>
-
-      <div v-if="battery" class="summary">
-        <div class="sum-item">
-          <div class="k">电池编码</div>
-          <div class="v">{{ battery.batteryCode }}</div>
-        </div>
-        <div class="sum-item">
-          <div class="k">型号</div>
-          <div class="v">{{ battery.modelCode ?? '—' }}</div>
-        </div>
-        <div class="sum-item">
-          <div class="k">客户</div>
-          <div class="v">{{ battery.customerName ?? '—' }}</div>
-        </div>
-        <div class="sum-item">
-          <div class="k">状态</div>
-          <div class="v">
-            <el-tag :type="statusTagType(battery.status)" effect="dark">
-              {{ statusText(battery.status) }}
+      <div class="header-row">
+        <div class="header-left">
+          <div class="main-title">
+            <span class="id-text">{{ batteryId }}</span>
+            <el-tag :type="statusTagType(battery?.status)" effect="dark" size="small" class="status-tag">
+              {{ statusText(battery?.status) }}
             </el-tag>
           </div>
-        </div>
-        <div class="sum-item">
-          <div class="k">SOH(%)</div>
-          <div class="v">{{ battery.sohPercent ?? '—' }}</div>
-        </div>
-        <div class="sum-item">
-          <div class="k">循环数</div>
-          <div class="v">{{ battery.cycleCount ?? '—' }}</div>
-        </div>
-        <div class="sum-item">
-          <div class="k">额定容量(Ah)</div>
-          <div class="v">
-            {{ battery.ratedCapacityAh != null ? battery.ratedCapacityAh.toFixed(2) : '—' }}
+          <div class="sub-meta">
+            <span>编码: {{ battery?.batteryCode || '--' }}</span>
+            <el-divider direction="vertical" />
+            <span>型号: {{ battery?.modelCode || '--' }}</span>
+            <el-divider direction="vertical" />
+            <span>客户: {{ battery?.customerName || '--' }}</span>
           </div>
         </div>
-        <div class="sum-item">
-          <div class="k">最近记录时间</div>
-          <div class="v">{{ battery.lastRecordAt ?? '—' }}</div>
-        </div>
-      </div>
-      <div v-else class="muted" style="margin-top: 8px;">
-        正在加载电池信息...
-      </div>
 
-      <!-- 全局错误/提示 -->
-      <div v-if="errorMsg" class="muted" style="color: #f56c6c; margin-top: 8px;">
-        {{ errorMsg }}
+        <div class="header-metrics">
+          <div class="metric-item">
+            <div class="lbl">SOH</div>
+            <div class="val">{{ battery?.sohPercent ?? '-' }} <span class="unit">%</span></div>
+          </div>
+          <div class="metric-item">
+            <div class="lbl">额定容量</div>
+            <div class="val">{{ battery?.ratedCapacityAh?.toFixed(2) ?? '-' }} <span class="unit">Ah</span></div>
+          </div>
+          <div class="metric-item">
+            <div class="lbl">循环次数</div>
+            <div class="val">{{ battery?.cycleCount ?? '-' }}</div>
+          </div>
+          <div class="metric-item">
+            <div class="lbl">更新时间</div>
+            <div class="val date">{{ battery?.lastRecordAt?.split(' ')[0] ?? '-' }}</div>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <el-button @click="back" size="small">返回</el-button>
+          <el-button type="primary" @click="refresh" size="small">刷新</el-button>
+        </div>
       </div>
     </el-card>
 
+    <!-- 全生命周期曲线 -->
+    <el-row :gutter="12" class="viz-section">
+      <el-col :span="8">
+        <el-card class="card viz-card" shadow="never">
+          <div class="card-header">
+            <span class="title">全生命周期趋势 (SOH/Capacity)</span>
+          </div>
+          <div class="chart-placeholder trend-chart">
+            <div class="placeholder-text">Lifecycle Trend Chart Container</div>
+          </div>
+        </el-card>
+      </el-col>
+
+      <!-- 单次循环分析 -->
+      <el-col :span="16">
+        <el-card class="card viz-card" shadow="never">
+          <div class="card-header flex-between">
+            <div class="left-tools">
+              <span class="title">单次循环分析</span>
+              <el-input-number 
+                v-model="cyclePoint" 
+                :min="1" :max="cycleMax" 
+                size="small" 
+                controls-position="right"
+                class="cycle-input"
+                @change="onCycleChange"
+              >
+                <template #prefix>Cycle</template>
+              </el-input-number>
+            </div>
+            
+            <div class="cycle-stats-bar">
+              <span class="stat">Max V: <b>3.65V</b></span>
+              <span class="stat">Max T: <b class="warn">42℃</b></span>
+              <span class="stat">Cap: <b>102Ah</b></span>
+              <span class="stat">Time: <b>120min</b></span>
+            </div>
+          </div>
+
+          <div class="chart-placeholder cycle-chart">
+             <div class="placeholder-text">Current Cycle Charge/Discharge Curve Container</div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
     <!-- 循环选择与记录表格 -->
-    <el-card class="card" shadow="never">
+    <el-card class="card flex-fill" shadow="never">
       <div class="detail-head">
         <div class="card-title" style="margin: 0">
           当前循环：
@@ -88,15 +114,14 @@
         当前循环暂无采样数据
       </div>
 
-      <el-table :data="records" height="420" stripe>
+      <el-table :data="records" style="width: 100%" class="fill-table" stripe>
         <el-table-column type="index" label="序号" width="70" />
-        <el-table-column prop="timeMin" label="时间(min)" width="120" sortable />
-        <el-table-column prop="voltage" label="电压(V)" width="120" sortable />
-        <el-table-column prop="current" label="电流(A)" width="120" sortable />
-        <el-table-column prop="temp" label="温度(℃)" width="120" sortable />
-        <el-table-column prop="capacity" label="容量(Ah)" width="120" sortable />
-        <el-table-column prop="cycle" label="循环号" width="90" sortable />
-        <el-table-column prop="sourceFile" label="来源文件" min-width="180" />
+        <el-table-column prop="timeMin" label="时间(min)" min-width="120" sortable />
+        <el-table-column prop="voltage" label="电压(V)" min-width="120" sortable />
+        <el-table-column prop="current" label="电流(A)" min-width="120" sortable />
+        <el-table-column prop="temp" label="温度(℃)" min-width="120" sortable />
+        <el-table-column prop="capacity" label="容量(Ah)" min-width="120" sortable />
+        <el-table-column prop="cycle" label="循环号" min-width="90" sortable />
       </el-table>
     </el-card>
   </div>
@@ -151,7 +176,6 @@ const battery = ref<BatteryDetailDto | null>(null)
 const loadingDetail = ref(false)
 const loadingRecords = ref(false)
 const errorMsg = ref<string | null>(null)
-
 const cyclePoint = ref<number>(1)
 const cycleMax = ref<number>(1)
 
@@ -251,83 +275,236 @@ onMounted(async () => {
 .page {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  height: calc(100vh - 40px);
+  gap: 12px;
+  color: #cfd3dc;
 }
 
 .card {
   background: #141414;
-  border: 1px solid #1f1f1f;
+  border: 1px solid #2a2a2a;
+  border-radius: 4px;
 }
 
-.pack-head {
+/* 1. 顶部 Header 样式 */
+.compact-header :deep(.el-card__body) {
+  padding: 12px 20px;
+}
+
+.header-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-}
-.title .name {
-  font-size: 16px;
-  font-weight: 600;
-  color: #fff;
-}
-.muted {
-  color: #7a7a7a;
-}
-.right {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
 }
 
-.summary {
-  margin-top: 12px;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+.header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.main-title {
+  display: flex;
+  align-items: center;
   gap: 10px;
 }
-.sum-item {
-  background: #101010;
-  border: 1px solid #1f1f1f;
-  border-radius: 8px;
-  padding: 10px 12px;
+.id-text {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.5px;
 }
-.sum-item .k {
+
+.sub-meta {
   font-size: 12px;
   color: #7a7a7a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
-.sum-item .v {
-  margin-top: 6px;
-  color: #fff;
+
+/* 中间指标栏 */
+.header-metrics {
+  display: flex;
+  gap: 30px;
+  background: #1a1a1a;
+  padding: 6px 20px;
+  border-radius: 4px;
+  border: 1px solid #252525;
+}
+
+.metric-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.metric-item .lbl {
+  font-size: 11px;
+  color: #666;
+  text-transform: uppercase;
+}
+.metric-item .val {
+  font-size: 16px;
   font-weight: 600;
+  color: #409eff;
+  margin-top: 2px;
+}
+.metric-item .val.date {
+  font-size: 14px;
+  color: #ccc;
+}
+.metric-item .unit {
+  font-size: 11px;
+  color: #666;
+  font-weight: normal;
+}
+
+/* 2. 可视化区域样式 */
+.viz-section {
+  flex-shrink: 0;
+}
+
+.viz-card {
+  height: 340px;
+  display: flex;
+  flex-direction: column;
+}
+
+.viz-card :deep(.el-card__body) {
+  padding: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-header {
+  padding: 10px 15px;
+  border-bottom: 1px solid #252525;
+  background: #181818;
+  font-size: 14px;
+  font-weight: 600;
+  color: #eee;
+}
+
+.flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.left-tools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cycle-input {
+  width: 110px;
+}
+
+/* 统计摘要条 */
+.cycle-stats-bar {
+  display: flex;
+  gap: 15px;
+  font-size: 12px;
+  color: #999;
+}
+.cycle-stats-bar b {
+  color: #eee;
+  margin-left: 2px;
+}
+.cycle-stats-bar b.warn {
+  color: #e6a23c;
+}
+
+/* 图表占位符通用样式 */
+.chart-placeholder {
+  flex: 1;
+  width: 100%;
+  position: relative;
+  background: linear-gradient(180deg, #141414 0%, #181818 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.placeholder-text {
+  color: #333;
+  font-weight: 700;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* 3. 表格区域 */
+.flex-fill {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  border-bottom: none;
+}
+
+/* 强制让 el-card 的 body 区域填满父容器 */
+.flex-fill :deep(.el-card__body) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 .detail-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-  gap: 10px;
-}
-.card-title {
-  color: #fff;
-  font-weight: 600;
+  padding: 10px 15px;
+  background: #181818;
+  border-bottom: 1px solid #252525;
+  flex-shrink: 0;
 }
 
-:deep(.el-table) {
+
+.flex-fill :deep(.el-table) {
+  flex: 1;
+  width: 100%;
+  height: 100% !important;
+  
+ 
   background-color: transparent;
+  --el-table-bg-color: transparent;
+  --el-table-tr-bg-color: transparent;
+  --el-table-header-bg-color: #1a1a1a;
+  --el-table-border-color: #252525;
   color: #cfd3dc;
 }
-:deep(.el-table th.el-table__cell) {
-  background: #141414;
-  color: #cfd3dc;
+
+
+.flex-fill :deep(.el-table th.el-table__cell) {
+  background: #1a1a1a;
+  color: #999;
+  font-weight: normal;
+  border-bottom: 1px solid #252525;
 }
-:deep(.el-table tr) {
-  background: #141414;
+
+
+.flex-fill :deep(.el-table td.el-table__cell) {
+  border-bottom: 1px solid #252525;
+  padding: 8px 0; /* 调整行高 */
 }
-:deep(.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell) {
-  background: #121212;
+
+
+.flex-fill :deep(.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell) {
+  background-color: transparent !important;
 }
-:deep(.el-table td.el-table__cell) {
-  border-bottom: 1px solid #1f1f1f;
+
+
+.flex-fill :deep(.el-table__body tr:hover > td.el-table__cell) {
+  background-color: transparent !important;
+}
+
+
+.flex-fill :deep(.el-table__inner-wrapper::before) {
+  display: none;
 }
 </style>
