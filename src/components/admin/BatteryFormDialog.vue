@@ -54,7 +54,7 @@
           <el-button>选择 CSV 文件</el-button>
         </el-upload>
         <span class="muted" style="margin-left: 10px">
-          用于自动填充循环数和最近记录时间
+          将上传的循环数据用于自动预测 SOH、填充循环数与最近记录时间
         </span>
       </el-form-item>
 
@@ -64,7 +64,20 @@
       </el-form-item>
 
       <el-form-item label="SOH(%)">
-        <el-input-number v-model="form.sohPercent" :min="0" :max="120" :step="0.1" />
+        <el-input-number
+          v-model="form.sohPercent"
+          :min="0"
+          :max="120"
+          :step="0.1"
+          :disabled="!!form.uploadToken"/>
+        <span class="muted" style="margin-left: 10px">
+          <template v-if="form.uploadToken">
+            已绑定 CSV，SOH 将由系统自动预测
+          </template>
+          <template v-else>
+            可手动填写，或通过上传 CSV 自动预测
+          </template>
+        </span>
       </el-form-item>
 
       <el-form-item label="循环数">
@@ -102,7 +115,7 @@ export type BatteryForm = {
   commissioningDate: string
   statusFrontend: Status
   ratedCapacityAh: number
-  sohPercent: number
+  sohPercent: number | null
   cycleCount: number
   lastRecordAt: string
   uploadToken?: string
@@ -134,9 +147,10 @@ const form = reactive<BatteryForm>({
   commissioningDate: '2024-01-01',
   statusFrontend: 'in_service',
   ratedCapacityAh: 2.0,
-  sohPercent: 100,
+  sohPercent: null,
   cycleCount: 0,
   lastRecordAt: formatNow(),
+  uploadToken: '',
 })
 
 // 当前选择的 CSV 文件名
@@ -174,10 +188,9 @@ function onClosed() {
   csvFileName.value = ''
 }
 
-// 上传 CSV → 调用 /api/batteries/upload
+// 上传 CSV → 调用 /api/battery-csv/upload
 async function handleCsvUpload(option: any) {
   const file: File = option.file
-  // 更新文件名显示
   csvFileName.value = file.name
 
   const formData = new FormData()
@@ -187,24 +200,46 @@ async function handleCsvUpload(option: any) {
     const resp = await axios.post('/api/batteries/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
+
+    console.log('CSV upload response:', resp.data)
+
     const draft = resp.data as {
-      cycleCount: number
-      sohPercent: number | null
-      lastRecordAt: string
-      uploadToken: string
+      batteryCode?: string
+      modelCode?: string
+      customerName?: string
+      ratedCapacityAh?: number
+      cycleCount?: number
+      sohPercent?: number | null
+      lastRecordAt?: string
+      uploadToken?: string
     }
 
-    form.cycleCount = draft.cycleCount ?? 0
-    form.lastRecordAt = draft.lastRecordAt ?? formatNow()
+    
+    if (draft.uploadToken) {
+      form.uploadToken = draft.uploadToken
+    }
+
+    
+    if (draft.cycleCount != null) {
+      form.cycleCount = draft.cycleCount
+    }
+    if (draft.lastRecordAt) {
+      form.lastRecordAt = draft.lastRecordAt
+    }
     if (draft.sohPercent != null) {
-      form.sohPercent = draft.sohPercent
+      form.sohPercent = Number(draft.sohPercent)
     }
-    form.uploadToken = draft.uploadToken
 
-    ElMessage.success('CSV 解析成功')
-    option.onSuccess && option.onSuccess(null, file)
+    // 如果后端未来也自动解析 batteryCode / modelCode 等，也可以填：
+    // if (draft.batteryCode) form.batteryCode = draft.batteryCode
+    // if (draft.modelCode) form.modelCode = draft.modelCode
+    // if (draft.customerName) form.customerName = draft.customerName
+    // if (draft.ratedCapacityAh != null) form.ratedCapacityAh = draft.ratedCapacityAh
+
+    ElMessage.success('CSV 解析成功，已绑定预测数据')
+    option.onSuccess && option.onSuccess(resp.data, file)
   } catch (e) {
-    console.error(e)
+    console.error('CSV 上传异常:', e)
     ElMessage.error('CSV 解析失败')
     option.onError && option.onError(e)
   }

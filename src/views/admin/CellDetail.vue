@@ -276,14 +276,14 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   height: calc(100vh - 40px);
-  gap: 12px;
+  gap: 8px;
   color: #cfd3dc;
 }
 
 .card {
   background: #141414;
   border: 1px solid #2a2a2a;
-  border-radius: 4px;
+  border-radius: 10px;
 }
 
 /* 1. 顶部 Header 样式 */
@@ -379,10 +379,10 @@ onMounted(async () => {
 }
 
 .card-header {
-  padding: 10px 15px;
+  padding: 1px 15px;
   border-bottom: 1px solid #252525;
   background: #181818;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
   color: #eee;
 }
@@ -503,7 +503,7 @@ onMounted(async () => {
   background-color: transparent !important;
 }
 
-
+/* 去除表格底部自带的那条线 */
 .flex-fill :deep(.el-table__inner-wrapper::before) {
   display: none;
 }
