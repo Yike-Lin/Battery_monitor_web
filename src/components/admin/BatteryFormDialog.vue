@@ -54,7 +54,7 @@
           <el-button>选择 CSV 文件</el-button>
         </el-upload>
         <span class="muted" style="margin-left: 10px">
-          将上传的循环数据用于自动预测 SOH、填充循环数与最近记录时间
+          将上传的循环数据用于自动预测 SOH、填充数据
         </span>
       </el-form-item>
 

@@ -46,49 +46,21 @@
       </div>
     </el-card>
 
-    <!-- 全生命周期曲线 -->
+    
     <el-row :gutter="12" class="viz-section">
+      <!-- 全生命周期曲线 -->
       <el-col :span="8">
-        <el-card class="card viz-card" shadow="never">
-          <div class="card-header">
-            <span class="title">全生命周期趋势 (SOH/Capacity)</span>
-          </div>
-          <div class="chart-placeholder trend-chart">
-            <div class="placeholder-text">Lifecycle Trend Chart Container</div>
-          </div>
-        </el-card>
+        <LifecycleCapacityCard :points="lifecyclePoints" />
       </el-col>
 
       <!-- 单次循环分析 -->
       <el-col :span="16">
-        <el-card class="card viz-card" shadow="never">
-          <div class="card-header flex-between">
-            <div class="left-tools">
-              <span class="title">单次循环分析</span>
-              <el-input-number 
-                v-model="cyclePoint" 
-                :min="1" :max="cycleMax" 
-                size="small" 
-                controls-position="right"
-                class="cycle-input"
-                @change="onCycleChange"
-              >
-                <template #prefix>Cycle</template>
-              </el-input-number>
-            </div>
-            
-            <div class="cycle-stats-bar">
-              <span class="stat">Max V: <b>3.65V</b></span>
-              <span class="stat">Max T: <b class="warn">42℃</b></span>
-              <span class="stat">Cap: <b>102Ah</b></span>
-              <span class="stat">Time: <b>120min</b></span>
-            </div>
-          </div>
-
-          <div class="chart-placeholder cycle-chart">
-             <div class="placeholder-text">Current Cycle Charge/Discharge Curve Container</div>
-          </div>
-        </el-card>
+        <CycleAnalysisCard
+          v-model="cyclePoint"
+          :cycle-max="cycleMax"
+          :records="records"
+          @change="onCycleChange"
+        />
       </el-col>
     </el-row>
 
@@ -116,11 +88,11 @@
 
       <el-table :data="records" style="width: 100%" class="fill-table" stripe>
         <el-table-column type="index" label="序号" width="70" />
-        <el-table-column prop="timeMin" label="时间(min)" min-width="120" sortable />
-        <el-table-column prop="voltage" label="电压(V)" min-width="120" sortable />
-        <el-table-column prop="current" label="电流(A)" min-width="120" sortable />
-        <el-table-column prop="temp" label="温度(℃)" min-width="120" sortable />
-        <el-table-column prop="capacity" label="容量(Ah)" min-width="120" sortable />
+        <el-table-column prop="timeMin" label="时间(min)" min-width="120" sortable :formatter="formatDecimal" />
+        <el-table-column prop="voltage" label="电压(V)" min-width="120" sortable :formatter="formatDecimal" />
+        <el-table-column prop="current" label="电流(A)" min-width="120" sortable :formatter="formatDecimal" />
+        <el-table-column prop="temp" label="温度(℃)" min-width="120" sortable :formatter="formatDecimal" />
+        <el-table-column prop="capacity" label="容量(Ah)" min-width="120" sortable :formatter="formatDecimal" />
         <el-table-column prop="cycle" label="循环号" min-width="90" sortable />
       </el-table>
     </el-card>
@@ -131,6 +103,9 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
+
+import CycleAnalysisCard from '@/components/admin/CycleAnalysisCard.vue'
+import LifecycleCapacityCard from '@/components/admin/LifecycleCapacityCard.vue'
 
 type Status = 1 | 2 | 3
 
@@ -181,11 +156,20 @@ const cycleMax = ref<number>(1)
 
 const records = ref<BatteryRecordDto[]>([])
 
+// 保留三位小数的格式化函数
+const formatDecimal = (row: any, column: any, cellValue: any) => {
+  if (cellValue === null || cellValue === undefined) return '-' // 处理空值
+  const num = Number(cellValue)
+  return Number.isNaN(num) ? cellValue : num.toFixed(3)
+}
+
 const packMetaText = computed(() => {
   const b = battery.value
   if (!b) return '用于查看单体电池台账信息与采样记录'
   return `编号：${b.batteryCode ?? '—'} · 型号：${b.modelCode ?? '—'} · 客户：${b.customerName ?? '—'}`
 })
+
+const lifecyclePoints = ref<{ cycle: number; capacityAh: number | null }[]>([])
 
 function statusText(s?: Status) {
   if (!s) return '—'
@@ -254,10 +238,27 @@ async function loadRecordsByCycle(cycle: number) {
 async function refresh() {
   await loadBatteryDetail()
   await loadRecordsByCycle(cyclePoint.value)
+  await loadLifecycleTrend()
 }
 
 async function onCycleChange() {
   await loadRecordsByCycle(cyclePoint.value)
+}
+
+async function loadLifecycleTrend() {
+  if (!batteryId.value) {
+    lifecyclePoints.value = []
+    return
+  }
+  try {
+    const resp = await axios.get<{ cycle: number; capacityAh: number | null }[]>(
+      `/api/batteries/${batteryId.value}/records/lifecycle-capacity`,
+    )
+    lifecyclePoints.value = resp.data || []
+  } catch (e: any) {
+    console.error('加载生命周期容量趋势失败', e)
+    lifecyclePoints.value = []
+  }
 }
 
 function back() {
@@ -268,6 +269,7 @@ onMounted(async () => {
   console.log('CellDetail mounted, route.params = ', route.params)
   await loadBatteryDetail()
   await loadRecordsByCycle(cyclePoint.value)
+  await loadLifecycleTrend()
 })
 </script>
 
