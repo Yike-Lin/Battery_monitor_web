@@ -43,7 +43,7 @@
 
     <!-- 列表 -->
     <el-card class="card" shadow="never">
-      <el-table :data="tableData" height="calc(100vh - 230px)" stripe>
+      <el-table :data="tableData" style="width: 100%; flex: 1;" stripe>
         <el-table-column prop="batteryCode" label="ID" width="140" />
         <el-table-column prop="modelCode" label="型号" min-width="220" />
         <el-table-column prop="commissioningDate" label="投运日期" width="130" />
@@ -332,14 +332,43 @@ const payload = {
 </script>
 
 <style scoped>
-.page { display: flex; flex-direction: column; gap: 14px; }
-.toolbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.page {
+  height: calc(100vh - 100px); 
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
 .filter { flex: 1; }
 .actions { flex: 0 0 auto; }
 
-.card { background: #141414; border: 1px solid #1f1f1f; }
+.card {
+  background: #141414;
+  border: 1px solid #1f1f1f;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; 
+}
 
-.pager { display: flex; justify-content: flex-end; padding-top: 12px; }
+.pager {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 12px;
+  flex-shrink: 0;
+}
 .muted { color: #7a7a7a; }
 
 .soh { font-weight: 600; }

@@ -45,6 +45,9 @@
     -webkit-backdrop-filter: blur(20px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     z-index: 10;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
   }
 
   .header-center {

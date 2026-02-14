@@ -81,11 +81,12 @@ const demoPackId = 'P0001'
 
 <style scoped>
 .layout-wrapper {
-  height: 100vh;
-  width: 100vw;
+  height: 100%;
+  width: 100%;
   background-color: #0d0d0d;
   color: #cfd3dc;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 /* sidebar */
@@ -161,5 +162,7 @@ const demoPackId = 'P0001'
 .layout-main {
   background-color: #0d0d0d;
   padding: 20px;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 </style>

@@ -86,15 +86,17 @@
         当前循环暂无采样数据
       </div>
 
-      <el-table :data="records" style="width: 100%" class="fill-table" stripe>
-        <el-table-column type="index" label="序号" width="70" />
-        <el-table-column prop="timeMin" label="时间(min)" min-width="120" sortable :formatter="formatDecimal" />
-        <el-table-column prop="voltage" label="电压(V)" min-width="120" sortable :formatter="formatDecimal" />
-        <el-table-column prop="current" label="电流(A)" min-width="120" sortable :formatter="formatDecimal" />
-        <el-table-column prop="temp" label="温度(℃)" min-width="120" sortable :formatter="formatDecimal" />
-        <el-table-column prop="capacity" label="容量(Ah)" min-width="120" sortable :formatter="formatDecimal" />
-        <el-table-column prop="cycle" label="循环号" min-width="90" sortable />
-      </el-table>
+      <div class="table-wrapper">
+        <el-table :data="records" style="width: 100%" class="fill-table" stripe>
+          <el-table-column type="index" label="序号" width="70" />
+          <el-table-column prop="timeMin" label="时间(min)" min-width="120" sortable :formatter="formatDecimal" />
+          <el-table-column prop="voltage" label="电压(V)" min-width="120" sortable :formatter="formatDecimal" />
+          <el-table-column prop="current" label="电流(A)" min-width="120" sortable :formatter="formatDecimal" />
+          <el-table-column prop="temp" label="温度(℃)" min-width="120" sortable :formatter="formatDecimal" />
+          <el-table-column prop="capacity" label="容量(Ah)" min-width="120" sortable :formatter="formatDecimal" />
+          <el-table-column prop="cycle" label="循环号" min-width="90" sortable />
+        </el-table>
+      </div> 
     </el-card>
   </div>
 </template>
@@ -307,18 +309,21 @@ onMounted(async () => {
 .page {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 40px);
-  gap: 8px;
+  height: calc(100vh - 84px);
+  gap: 12px;
+  padding: 1px 1px 1px 14px;
+  box-sizing: border-box;
+  overflow: hidden;
+  overflow-x: hidden;
   color: #cfd3dc;
 }
 
 .card {
   background: #141414;
   border: 1px solid #2a2a2a;
-  border-radius: 10px;
+  border-radius: 4px;
 }
 
-/* 1. 顶部 Header 样式 */
 .compact-header :deep(.el-card__body) {
   padding: 12px 20px;
 }
@@ -332,7 +337,7 @@ onMounted(async () => {
 .header-left {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .main-title {
@@ -479,7 +484,13 @@ onMounted(async () => {
   border-bottom: none;
 }
 
-/* 强制让 el-card 的 body 区域填满父容器 */
+.table-wrapper {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
 .flex-fill :deep(.el-card__body) {
   flex: 1;
   display: flex;
@@ -500,8 +511,7 @@ onMounted(async () => {
 .flex-fill :deep(.el-table) {
   flex: 1;
   width: 100%;
-  height: 100% !important;
-  
+  overflow: hidden;
  
   background-color: transparent;
   --el-table-bg-color: transparent;
@@ -538,5 +548,44 @@ onMounted(async () => {
 /* 去除表格底部自带的那条线 */
 .flex-fill :deep(.el-table__inner-wrapper::before) {
   display: none;
+}
+</style>
+
+<!-- 滑动条样式 -->
+<style>
+.table-wrapper::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.table-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+.table-wrapper::-webkit-scrollbar-thumb {
+  background-color: #333;
+  border-radius: 4px;
+}
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+  background-color: #555;
+}
+
+.el-table__body-wrapper::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.el-table__body-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+.el-table__body-wrapper::-webkit-scrollbar-thumb {
+  background-color: #333;
+  border-radius: 4px;
+}
+.el-table__body-wrapper::-webkit-scrollbar-thumb:hover {
+  background-color: #555;
+}
+
+.el-table {
+  --el-table-scroll-color: #333;
+  --el-scrollbar-bg-color: #333;
+  --el-scrollbar-opacity: 0.5;
 }
 </style>
