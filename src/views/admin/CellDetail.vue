@@ -6,7 +6,7 @@
       <div class="header-row">
         <div class="header-left">
           <div class="main-title">
-            <span class="id-text">{{ batteryId }}</span>
+            <span class="id-text">{{ battery?.batteryCode || '--' }}</span>
             <el-tag :type="statusTagType(battery?.status)" effect="dark" size="small" class="status-tag">
               {{ statusText(battery?.status) }}
             </el-tag>
@@ -141,11 +141,13 @@ const route = useRoute()
 const router = useRouter()
 
 // 对应路由: /admin/cell-detail/:batteryId
-const rawId = computed(() => route.params.batteryId)
-const batteryId = computed<number | null>(() => {
-  const v = Number(rawId.value)
-  return Number.isNaN(v) ? null : v
-})
+// const rawId = computed(() => route.params.batteryId)
+// const batteryId = computed<number | null>(() => {
+//   const v = Number(rawId.value)
+//   return Number.isNaN(v) ? null : v
+// })
+
+const currentId = ref<number | null>(null)
 
 const battery = ref<BatteryDetailDto | null>(null)
 const loadingDetail = ref(false)
@@ -186,18 +188,28 @@ function statusTagType(s?: Status) {
 }
 
 async function loadBatteryDetail() {
-  if (!batteryId.value) {
-    errorMsg.value = '路由中缺少有效的电池ID'
-    console.warn('batteryId is invalid, params:', route.params)
-    return
-  }
+  loadingDetail.value = true
+  errorMsg.value = null
+  
   try {
-    loadingDetail.value = true
-    errorMsg.value = null
-    const resp = await axios.get<BatteryDetailDto>(`/api/batteries/${batteryId.value}`)
-    battery.value = resp.data
-    console.log('battery detail:', battery.value)
+    let targetId = route.params.batteryId ? Number(route.params.batteryId) : null
+    let resp
+    if (targetId) {
+      resp = await axios.get<BatteryDetailDto>(`/api/batteries/${targetId}`)
+    } else {
+      console.log('路由无ID，尝试获取最新电池...')
+      resp = await axios.get<BatteryDetailDto>('/api/batteries/latest')
+    }
 
+    if (!resp.data) {
+        errorMsg.value = '未找到电池数据'
+        return null
+    }
+
+    battery.value = resp.data
+    currentId.value = battery.value.id 
+    
+    // 初始化循环次数选择器
     if (battery.value.cycleCount && battery.value.cycleCount > 0) {
       cycleMax.value = battery.value.cycleCount
       cyclePoint.value = battery.value.cycleCount
@@ -205,40 +217,53 @@ async function loadBatteryDetail() {
       cycleMax.value = 1
       cyclePoint.value = 1
     }
+    
+    // 返回 ID 给 onMounted 用
+    return currentId.value
+
   } catch (e: any) {
     console.error('加载电池详情失败', e)
-    errorMsg.value = e?.response?.data?.message || '加载电池详情失败'
+    if (e.response && e.response.status === 404) {
+         errorMsg.value = '暂无电池数据，请先入库'
+    } else {
+         errorMsg.value = e?.response?.data?.message || '加载电池详情失败'
+    }
+    return null
   } finally {
     loadingDetail.value = false
   }
 }
 
 async function loadRecordsByCycle(cycle: number) {
-  if (!batteryId.value || !cycle) {
-    console.warn('batteryId 或 cycle 为空', batteryId.value, cycle, route.params)
+  const id = currentId.value
+  
+  if (!id || !cycle) {
     return
   }
+  
   try {
     loadingRecords.value = true
     errorMsg.value = null
-    const resp = await axios.get<BatteryRecordDto[]>(`/api/batteries/${batteryId.value}/records/by-cycle`, {
+    // 使用 id 变量
+    const resp = await axios.get<BatteryRecordDto[]>(`/api/batteries/${id}/records/by-cycle`, {
       params: { cycle },
     })
     records.value = resp.data || []
-    console.log(`records for cycle ${cycle}:`, records.value)
   } catch (e: any) {
     console.error('加载记录失败', e)
-    errorMsg.value = e?.response?.data?.message || '加载记录失败'
     records.value = []
   } finally {
     loadingRecords.value = false
   }
 }
 
+// 刷新
 async function refresh() {
-  await loadBatteryDetail()
-  await loadRecordsByCycle(cyclePoint.value)
-  await loadLifecycleTrend()
+  const id = await loadBatteryDetail()
+  if (id) {
+    await loadRecordsByCycle(cyclePoint.value)
+    await loadLifecycleTrend()
+  }
 }
 
 async function onCycleChange() {
@@ -246,13 +271,12 @@ async function onCycleChange() {
 }
 
 async function loadLifecycleTrend() {
-  if (!batteryId.value) {
-    lifecyclePoints.value = []
-    return
-  }
+  const id = currentId.value
+  if (!id) return
+
   try {
     const resp = await axios.get<{ cycle: number; capacityAh: number | null }[]>(
-      `/api/batteries/${batteryId.value}/records/lifecycle-capacity`,
+      `/api/batteries/${id}/records/lifecycle-capacity`,
     )
     lifecyclePoints.value = resp.data || []
   } catch (e: any) {
@@ -265,11 +289,17 @@ function back() {
   router.push('/admin/battery-ledger')
 }
 
+// 挂载
 onMounted(async () => {
-  console.log('CellDetail mounted, route.params = ', route.params)
-  await loadBatteryDetail()
-  await loadRecordsByCycle(cyclePoint.value)
-  await loadLifecycleTrend()
+  console.log('CellDetail mounted')
+  // 1. 等待详情加载完，并拿到 ID
+  const id = await loadBatteryDetail()
+  
+  // 2. 只有 ID 存在才加载下面的图表
+  if (id) {
+    await loadRecordsByCycle(cyclePoint.value)
+    await loadLifecycleTrend()
+  }
 })
 </script>
 

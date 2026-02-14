@@ -30,7 +30,7 @@ const routes: RouteRecordRaw[] = [
 
       // 资产管理 - 单体电池详情
       {
-        path: 'cell-detail/:batteryId',
+        path: 'cell-detail/:batteryId?',
         name: 'CellDetail',
         component: () => import('../views/admin/CellDetail.vue'),
         meta: { title: '单体电池详情', group: '资产管理' },
