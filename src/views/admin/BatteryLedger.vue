@@ -43,45 +43,78 @@
 
     <!-- 列表 -->
     <el-card class="card" shadow="never">
-      <el-table :data="tableData" style="width: 100%; flex: 1;" stripe>
-        <el-table-column prop="batteryCode" label="ID" width="140" />
-        <el-table-column prop="modelCode" label="型号" min-width="220" />
-        <el-table-column prop="commissioningDate" label="投运日期" width="130" />
-        <el-table-column prop="customerName" label="所属客户" min-width="140">
+      <el-table :data="tableData" style="width: 100%; flex: 1;" height="100%" stripe>
+        
+        <el-table-column prop="batteryCode" label="ID" width="140" align="left" header-align="left">
+          <template #default="{ row }">
+            <span class="font-mono">{{ row.batteryCode }}</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column prop="modelCode" label="型号" min-width="140" show-overflow-tooltip align="left" header-align="left" />
+
+        <el-table-column prop="commissioningDate" label="投运日期" width="130" align="center" header-align="center">
+          <template #default="{ row }">
+            <span class="font-mono">{{ row.commissioningDate }}</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column prop="customerName" label="所属客户" min-width="140" align="left" header-align="left">
           <template #default="{ row }">
             <span class="muted">{{ row.customerName || '—' }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="当前状态" width="120">
+
+        <el-table-column prop="status" label="当前状态" width="120" align="center" header-align="center">
           <template #default="{ row }">
-            <el-tag :type="statusTagType(mapStatusFromBackend(row.status))" effect="dark">
+            <el-tag :type="statusTagType(mapStatusFromBackend(row.status))" effect="dark" round>
               {{ statusText(mapStatusFromBackend(row.status)) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="ratedCapacityAh" label="额定容量(Ah)" width="140" />
-        <el-table-column prop="sohPercent" label="SOH(%)" width="110">
+
+        <el-table-column prop="ratedCapacityAh" label="额定容量(Ah)" width="120" align="center" header-align="center">
           <template #default="{ row }">
-            <span v-if="row.sohPercent != null" :class="sohClass(row.sohPercent)">
+            <span class="font-mono">{{ row.ratedCapacityAh }}</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column prop="sohPercent" label="SOH(%)" width="120" align="center" header-align="center">
+          <template #default="{ row }">
+            <span v-if="row.sohPercent != null" :class="['font-mono', sohClass(row.sohPercent)]">
               {{ row.sohPercent.toFixed(1) }}
             </span>
             <span v-else class="muted">—</span>
           </template>
         </el-table-column>
-        <el-table-column prop="cycleCount" label="循环数" width="90" />
-        <el-table-column label="最近记录" min-width="170">
+
+        <el-table-column prop="cycleCount" label="循环数" width="120" align="center" header-align="center">
           <template #default="{ row }">
-            <span :class="['time', !row.lastRecordAt ? 'muted' : '']">
+            <span class="font-mono">{{ row.cycleCount }}</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="最近记录" min-width="140" align="center" header-align="center">
+          <template #default="{ row }">
+            <span :class="['font-mono', 'time', !row.lastRecordAt ? 'muted' : '']">
               {{ formatLastRecordAtForDisplay(row.lastRecordAt) }}
             </span>
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="150" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right" align="center" header-align="center">
           <template #default="{ row }">
-            <el-button link type="primary" @click="onViewDetailClick(row)">查看详情</el-button>
-            <el-button link type="primary" @click="onEditClick(row)">编辑</el-button>
-            <el-button link type="danger" @click="onDeleteClick(row)">删除</el-button>
+            <div class="action-buttons">
+              <el-tooltip content="查看详情" placement="top" :enterable="false">
+                <el-button link type="primary" :icon="View" @click="onViewDetailClick(row)" />
+              </el-tooltip>
+              <el-tooltip content="编辑" placement="top" :enterable="false">
+                <el-button link type="warning" :icon="Edit" @click="onEditClick(row)" />
+              </el-tooltip>
+              <el-tooltip content="删除" placement="top" :enterable="false">
+                <el-button link type="danger" :icon="Delete" @click="onDeleteClick(row)" />
+              </el-tooltip>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -114,6 +147,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage , ElMessageBox } from 'element-plus'
 import axios from 'axios'
 import BatteryFormDialog, { type BatteryForm } from '@/components/admin/BatteryFormDialog.vue'
+import { View, Edit, Delete } from '@element-plus/icons-vue'
 
 const router = useRouter()
 
@@ -336,20 +370,39 @@ const payload = {
   height: calc(100vh - 100px); 
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 14px;
+  gap: 15px;
+  padding: 1px 24px 24px 14px;
   box-sizing: border-box;
   overflow: hidden;
+}
+
+:deep(.el-card__body) {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 12px 16px;
+  overflow: hidden;
+}
+
+.action-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px; /* 按钮之间的间距 */
+}
+
+.action-buttons .el-button + .el-button {
+  margin-left: 0;
 }
 
 .toolbar {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 12px;
+  gap: 8px;
   flex-shrink: 0;
+  margin-bottom: 4px;
 }
-
 .filter { flex: 1; }
 .actions { flex: 0 0 auto; }
 
@@ -366,8 +419,10 @@ const payload = {
 .pager {
   display: flex;
   justify-content: flex-end;
-  padding-top: 12px;
+  padding: 10px 0;
   flex-shrink: 0;
+  border-top: 1px solid #1f1f1f;
+  margin-top: 4px;
 }
 .muted { color: #7a7a7a; }
 
@@ -381,78 +436,89 @@ const payload = {
   letter-spacing: 0.2px;
 }
 
-/* 表格整体深色风格 */
+
 :deep(.el-table) {
   background-color: transparent;
   color: #cfd3dc;
 }
 
-/* 表头 */
+
 :deep(.el-table th.el-table__cell) {
+  height: 40px;
+  padding: 0;
   background: #141414;
   color: #cfd3dc;
+  font-size: 15px;
+  font-weight: 600;
 }
 
-/* 普通行背景 */
+:deep(.filter-dark .el-form-item) {
+  margin-bottom: 8px !important;
+  margin-right: 12px !important;
+}
+
+:deep(.filter-dark.el-form--inline .el-form-item) {
+  margin-bottom: 0 !important; /* 彻底移除底边距 */
+  align-items: center;         /* 确保标签和输入框对齐 */
+}
+
+
 :deep(.el-table tr) {
   background: #141414;
 }
 
-/* 斑马纹行背景，稍微深一点 */
+
 :deep(.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell) {
   background: #161616;
 }
 
-/* 去掉 hover 高亮（改成接近原来的深色） */
+
 :deep(.el-table__body tr:hover > td) {
   background-color: #1a1a1a !important;
 }
 
-/* 单元格边框 */
 :deep(.el-table td.el-table__cell) {
   border-bottom: 1px solid #1f1f1f;
+  height: 61px;
+  padding: 0;
 }
 
-/* ========== 顶部筛选表单：只在 .filter-dark 内生效 ========== */
-
-/* el-input 深色 */
 :deep(.filter-dark .el-input .el-input__wrapper) {
   background-color: #1c1c1c;
   box-shadow: 0 0 0 1px #303030 inset;
   color: #cfd3dc;
 }
 
-/* input 的 placeholder 颜色 */
+
 :deep(.filter-dark .el-input__inner::placeholder) {
   color: #555;
 }
 
-/* 聚焦时边框颜色稍微高亮一点 */
+
 :deep(.filter-dark .el-input.is-focus .el-input__wrapper),
 :deep(.filter-dark .el-input__wrapper.is-focus) {
   box-shadow: 0 0 0 1px #409eff inset;
 }
 
-/* el-select 深色 */
+
 :deep(.filter-dark .el-select .el-select__wrapper) {
   background-color: #1c1c1c;
   box-shadow: 0 0 0 1px #303030 inset;
   color: #cfd3dc;
 }
 
-/* el-select placeholder */
 :deep(.filter-dark .el-select .el-select__placeholder) {
   color: #555;
 }
 
-/* el-date-picker 深色（输入框部分） */
+
 :deep(.filter-dark .el-date-editor.el-input__wrapper) {
   background-color: #1c1c1c;
   box-shadow: 0 0 0 1px #303030 inset;
   color: #cfd3dc;
 }
 
-/* 日期文字和 placeholder */
+
 :deep(.filter-dark .el-date-editor .el-input__inner) {
   color: #cfd3dc;
 }
@@ -460,8 +526,66 @@ const payload = {
   color: #555;
 }
 
-/* 顶部筛选项标签颜色 */
+
 :deep(.filter-dark .el-form-item__label) {
   color: #cfd3dc;
 }
+
+
+:deep(.el-table .el-scrollbar__wrap) {
+  height: 100% !important;
+}
+
+:deep(.el-table .cell) {
+  display: flex;
+  align-items: center;
+  height: 100%; 
+  line-height: normal;
+}
+
+
+:deep(.el-table .cell) {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+:deep(.el-table .el-table__cell.is-center .cell) {
+  justify-content: center;
+}
+
+:deep(.el-table .el-table__cell.is-right .cell) {
+  justify-content: flex-end;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 20px; 
+  width: 100%;
+}
+
+
+:deep(.el-tag) {
+  border-width: 0;
+  font-weight: 500;
+}
+
+/* 1. 基础样式设置 */
+.action-buttons .el-button {
+  font-size: 17px;
+  padding: 4px 10px;
+  margin-left: 0 !important;
+  transition: all 0.2s;
+}
+
+
+.action-buttons .el-button:hover {
+  transform: scale(1.4);
+  background-color: transparent !important; 
+}
+
+
+
+
 </style>
