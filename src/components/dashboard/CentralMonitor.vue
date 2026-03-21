@@ -4,6 +4,7 @@
       <div class="header-left">
         <span class="card-title">双通道实时遥测 (V/A)</span>
         <span class="live-tag">● LIVE</span>
+        <div class="current-batteries" ref="batteryInfoRef"></div>
       </div>
       <div class="header-right">
         <div class="legend-box">
@@ -26,6 +27,7 @@ import axios from 'axios'
 
 // --- 核心状态 ---
 const chartRef = ref<HTMLElement | null>(null)
+const batteryInfoRef = ref<HTMLDivElement | null>(null)
 const myChart = shallowRef<echarts.ECharts | null>(null)
 let timer: any = null
 let resizeObserver: ResizeObserver | null = null
@@ -45,13 +47,13 @@ const dataQueue = {
 
 const fetchRealData = async () => {
   try {
-    // 假设 Pack A 是 b1c0，Pack B 是 b1c1
-    const res = await axios.get('http://localhost:8080/api/battery-dashboard/stream?idA=b1c0&idB=b1c1')
+    // 不传 idA/idB：后端会自动从 InfluxDB 选择“最新采样”的电池作为双通道数据源
+    const res = await axios.get('http://localhost:8080/api/battery-dashboard/stream')
     return res.data // 直接返回后端给的 { time, va, ca, vb, cb }
   } catch (err) {
     console.error("Fetch error:", err)
     // 出错时返回个空数据防止炸裂
-    return { time: new Date().toLocaleTimeString(), va: 0, ca: 0, vb: 0, cb: 0 }
+    return { time: new Date().toLocaleTimeString(), va: 0, ca: 0, vb: 0, cb: 0, cellIdA: '', cellIdB: '' }
   }
 }
 
@@ -71,6 +73,13 @@ const startLoop = () => {
   timer = setInterval(async () => {
     // A. 请求真实数据
     const next = await fetchRealData()
+
+    // B0. 更新“当前显示电池”
+    if (batteryInfoRef.value) {
+      const a = next.cellIdA || '-'
+      const b = next.cellIdB || '-'
+      batteryInfoRef.value.textContent = `当前显示：Pack-A ${a}，Pack-B ${b}`
+    }
 
     // B. 队列操作 (逻辑不变)
     dataQueue.time.shift(); dataQueue.time.push(next.time)
@@ -212,6 +221,13 @@ onUnmounted(() => {
   padding: 2px 6px; border-radius: 4px;
   font-weight: bold;
   animation: pulse 2s infinite;
+}
+
+.current-batteries {
+  font-size: 11px;
+  color: #999;
+  margin-left: 6px;
+  flex-basis: 100%;
 }
 
 .legend-box { display: flex; gap: 12px; }
