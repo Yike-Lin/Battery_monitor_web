@@ -47,12 +47,12 @@ const dataQueue = {
 
 const fetchRealData = async () => {
   try {
-    // 不传 idA/idB：后端会自动从 InfluxDB 选择“最新采样”的电池作为双通道数据源
+    // 不传 idA/idB，后端自动从 InfluxDB 选择“最新采样”的电池作为双通道数据源
     const res = await axios.get('http://localhost:8080/api/battery-dashboard/stream')
-    return res.data // 直接返回后端给的 { time, va, ca, vb, cb }
+    return res.data // 返回后端给的 { time, va, ca, vb, cb }
   } catch (err) {
     console.error("Fetch error:", err)
-    // 出错时返回个空数据防止炸裂
+    // 出错时返回个空数据防炸裂
     return { time: new Date().toLocaleTimeString(), va: 0, ca: 0, vb: 0, cb: 0, cellIdA: '', cellIdB: '' }
   }
 }
@@ -68,20 +68,20 @@ const initData = () => {
   }
 }
 
-// --- 2. 实时更新循环 (关键修复点) ---
+// 实时更新循环 
 const startLoop = () => {
   timer = setInterval(async () => {
-    // A. 请求真实数据
+    // 请求真实数据
     const next = await fetchRealData()
 
-    // B0. 更新“当前显示电池”
+    // 更新“当前显示电池”
     if (batteryInfoRef.value) {
       const a = next.cellIdA || '-'
       const b = next.cellIdB || '-'
       batteryInfoRef.value.textContent = `当前显示：Pack-A ${a}，Pack-B ${b}`
     }
 
-    // B. 队列操作 (逻辑不变)
+    // 队列操作
     dataQueue.time.shift(); dataQueue.time.push(next.time)
 
     // 如果后端返回 null (没数据), 赋 0 或者保持上一个值
@@ -90,7 +90,6 @@ const startLoop = () => {
     dataQueue.packB_V.shift(); dataQueue.packB_V.push(next.vb || 0)
     dataQueue.packB_C.shift(); dataQueue.packB_C.push(next.cb || 0)
 
-    // C. 渲染
     myChart.value?.setOption({
       xAxis: [
         { data: dataQueue.time },
@@ -106,7 +105,7 @@ const startLoop = () => {
   }, REFRESH_RATE)
 }
 
-// --- 3. 初始化图表 ---
+// 初始化图表
 const initChart = () => {
   if (!chartRef.value) return
 
@@ -193,7 +192,6 @@ onUnmounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  /* 更酷炫的深色背景 */
   background: radial-gradient(circle at center, #1f2029 0%, #101012 100%);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
@@ -236,11 +234,10 @@ onUnmounted(() => {
 .dot.pack-a { background: #74f2ce; box-shadow: 0 0 4px #74f2ce; }
 .dot.pack-b { background: #409eff; box-shadow: 0 0 4px #409eff; }
 
-/* 图表区域：关键修正 */
 .chart-wrapper {
-  flex: 1; /* 自动占据剩余高度 */
+  flex: 1;
   width: 100%;
-  min-height: 0; /* 防止溢出 */
+  min-height: 0;
   position: relative;
 }
 
