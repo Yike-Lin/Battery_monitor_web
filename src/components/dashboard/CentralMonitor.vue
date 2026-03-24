@@ -47,7 +47,7 @@ const dataQueue = {
 
 const fetchRealData = async () => {
   try {
-    // 不传 idA/idB，后端自动从 InfluxDB 选择“最新采样”的电池作为双通道数据源
+    // 不传 idA/idB，后端自动从 InfluxDB 选择最新的电池作为双通道数据源
     const res = await axios.get('http://localhost:8080/api/battery-dashboard/stream')
     return res.data // 返回后端给的 { time, va, ca, vb, cb }
   } catch (err) {
@@ -90,18 +90,25 @@ const startLoop = () => {
     dataQueue.packB_V.shift(); dataQueue.packB_V.push(next.vb || 0)
     dataQueue.packB_C.shift(); dataQueue.packB_C.push(next.cb || 0)
 
-    myChart.value?.setOption({
-      xAxis: [
-        { data: dataQueue.time },
-        { data: dataQueue.time }
-      ],
-      series: [
-        { data: dataQueue.packA_V },
-        { data: dataQueue.packA_C },
-        { data: dataQueue.packB_V },
-        { data: dataQueue.packB_C }
-      ]
-    })
+    // 仅更新必要字段，避免鼠标 tooltip 出现时卡顿
+    // - lazyUpdate: 延迟重绘
+    // - 不重建整个 option（tooltip/grid/axes 配置保持不变）
+    myChart.value?.setOption(
+      {
+        xAxis: [
+          { data: dataQueue.time },
+          { data: dataQueue.time }
+        ],
+        series: [
+          { data: dataQueue.packA_V },
+          { data: dataQueue.packA_C },
+          { data: dataQueue.packB_V },
+          { data: dataQueue.packB_C }
+        ]
+      },
+      false,
+      true
+    )
   }, REFRESH_RATE)
 }
 
@@ -118,23 +125,36 @@ const initChart = () => {
 
     tooltip: {
       trigger: 'axis',
+      enterable: false,
+      confine: true,
       backgroundColor: 'rgba(0,0,0,0.9)',
       borderColor: '#333',
       textStyle: { color: '#eee', fontSize: 12 },
       axisPointer: { type: 'cross', label: { backgroundColor: '#6a7985' } },
+      // 注意：formatter 会在鼠标移动时频繁触发，尽量保持轻量
       formatter: (params: any) => {
-        let html = `<div style="margin-bottom:4px;color:#aaa;font-size:11px">${params[0].axisValue}</div>`
-        html += `<div style="display:flex;gap:20px;">`
-        // Left Column: Pack A
-        html += `<div><div style="color:#74f2ce;font-weight:bold;font-size:11px;margin-bottom:2px">PACK A</div>`
-        html += `<div>V: ${params[0].value} V</div>`
-        html += `<div>A: ${params[1].value} A</div></div>`
-        // Right Column: Pack B
-        html += `<div><div style="color:#409eff;font-weight:bold;font-size:11px;margin-bottom:2px">PACK B</div>`
-        html += `<div>V: ${params[2].value} V</div>`
-        html += `<div>A: ${params[3].value} A</div></div>`
-        html += `</div>`
-        return html
+        const p0 = params?.[0]
+        const p1 = params?.[1]
+        const p2 = params?.[2]
+        const p3 = params?.[3]
+
+        const t = p0?.axisValue ?? ''
+        const av = p0?.value ?? 0
+        const ac = p1?.value ?? 0
+        const bv = p2?.value ?? 0
+        const bc = p3?.value ?? 0
+
+        // 纯字符串，避免复杂 DOM 布局计算
+        return [
+          `<div style="margin-bottom:4px;color:#aaa;font-size:11px">${t}</div>`,
+          `<div style="color:#74f2ce;font-weight:bold;font-size:11px">PACK A</div>`,
+          `<div>V: ${av} V</div>`,
+          `<div>A: ${ac} A</div>`,
+          `<div style="height:4px"></div>`,
+          `<div style="color:#409eff;font-weight:bold;font-size:11px">PACK B</div>`,
+          `<div>V: ${bv} V</div>`,
+          `<div>A: ${bc} A</div>`
+        ].join('')
       }
     },
     // 双 Grid 布局
@@ -212,6 +232,7 @@ onUnmounted(() => {
 }
 
 .header-left { display: flex; align-items: center; gap: 10px; }
+.header-left { flex: 1; min-width: 0; }
 .card-title { font-size: 14px; font-weight: 700; color: #eee; letter-spacing: 0.5px; }
 .live-tag {
   font-size: 10px; color: #ff4d4f;
@@ -225,10 +246,14 @@ onUnmounted(() => {
   font-size: 11px;
   color: #999;
   margin-left: 6px;
-  flex-basis: 100%;
+  flex: 0 1 auto;
+  max-width: 420px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.legend-box { display: flex; gap: 12px; }
+.legend-box { display: flex; gap: 12px; flex-shrink: 0; }
 .legend-item { font-size: 11px; color: #888; display: flex; align-items: center; gap: 4px; }
 .dot { width: 6px; height: 6px; border-radius: 50%; }
 .dot.pack-a { background: #74f2ce; box-shadow: 0 0 4px #74f2ce; }
