@@ -49,6 +49,15 @@ type BatteryPageResp = {
   content?: Array<{ sohPercent?: number | null; lastRecordAt?: string | null }>
   totalElements?: number
 }
+type BatteryRow = { sohPercent?: number | null; lastRecordAt?: string | null }
+type BatteryMetrics = {
+  avgSoh: number
+  sohCount: number
+  highRisk: number
+  midRisk: number
+  activeCount: number
+  replacementCount: number
+}
 
 const kpiList = ref([
   {
@@ -102,93 +111,111 @@ let totalTimer: number | null = null
 const ACTIVE_WINDOW_MS = 5 * 60 * 1000
 const tableData = ref<any[]>([])
 
-async function refreshBatteryTotal() {
-  try {
-    const totalResp = await axios.get<BatteryPageResp>('/api/batteries', {
-      params: { page: 0, size: 1 },
+function getKpiItem(key: string) {
+  return kpiList.value.find(item => item.key === key)
+}
+
+function updateTotal(total: number) {
+  const item = getKpiItem('total')
+  if (!item) return
+  item.value = String(total)
+  item.sub = total > 0 ? `已入库 ${total} 组` : '暂无入库电池'
+}
+
+function updateAvgSoh(metrics: BatteryMetrics) {
+  const item = getKpiItem('avg_soh')
+  if (!item) return
+  item.value = metrics.avgSoh.toFixed(1)
+  item.sub = metrics.sohCount > 0 ? `基于 ${metrics.sohCount} 组电池` : '暂无SOH数据'
+}
+
+function updateRisk(metrics: BatteryMetrics) {
+  const item = getKpiItem('risk')
+  if (!item) return
+  const totalRisk = metrics.highRisk + metrics.midRisk
+  item.value = String(totalRisk)
+  item.sub = totalRisk === 0 ? '暂无风险预警' : `${metrics.highRisk} 高风险 / ${metrics.midRisk} 中风险`
+}
+
+function updateActive(metrics: BatteryMetrics, total: number) {
+  const item = getKpiItem('charging')
+  if (!item) return
+  item.value = `${metrics.activeCount}/${total}`
+  item.sub = metrics.activeCount > 0 ? `近 5 分钟活跃 ${metrics.activeCount} 组` : '近 5 分钟无活跃数据'
+}
+
+function updateReplacement(metrics: BatteryMetrics) {
+  const item = getKpiItem('replacement')
+  if (!item) return
+  item.value = String(metrics.replacementCount)
+  item.sub = metrics.replacementCount > 0 ? 'SOH < 80% 建议更换' : '暂无更换建议'
+}
+
+function calcMetrics(rows: BatteryRow[]): BatteryMetrics {
+  let sum = 0
+  let sohCount = 0
+  let highRisk = 0
+  let midRisk = 0
+  let activeCount = 0
+  let replacementCount = 0
+
+  for (const row of rows) {
+    const soh = Number(row?.sohPercent)
+    if (!Number.isNaN(soh) && row?.sohPercent != null) {
+      sum += soh
+      sohCount += 1
+      if (soh < 75) highRisk += 1
+      else if (soh < 85) midRisk += 1
+      if (soh < 80) replacementCount += 1
+    }
+
+    const ts = row?.lastRecordAt ? Date.parse(row.lastRecordAt) : NaN
+    if (!Number.isNaN(ts) && Date.now() - ts <= ACTIVE_WINDOW_MS) {
+      activeCount += 1
+    }
+  }
+
+  return {
+    avgSoh: sohCount > 0 ? sum / sohCount : 0,
+    sohCount,
+    highRisk,
+    midRisk,
+    activeCount,
+    replacementCount,
+  }
+}
+
+async function loadAllBatteryRows(total: number) {
+  if (total <= 0) return [] as BatteryRow[]
+  const pageSize = 200
+  const totalPages = Math.ceil(total / pageSize)
+  const rows: BatteryRow[] = []
+  for (let page = 0; page < totalPages; page++) {
+    const pageResp = await axios.get<BatteryPageResp>('/api/batteries', {
+      params: { page, size: pageSize },
     })
+    rows.push(...(pageResp.data?.content || []))
+  }
+  return rows
+}
+
+async function refreshKpiData() {
+  try {
+    const totalResp = await axios.get<BatteryPageResp>('/api/batteries', { params: { page: 0, size: 1 } })
     const total = Number(totalResp.data?.totalElements ?? 0)
-    const totalItem = kpiList.value.find(item => item.key === 'total')
-    if (totalItem) {
-      totalItem.value = String(total)
-      totalItem.sub = total > 0 ? `已入库 ${total} 组` : '暂无入库电池'
-    }
-
-    const avgItem = kpiList.value.find(item => item.key === 'avg_soh')
-    if (!avgItem) return
-
-    if (total <= 0) {
-      avgItem.value = '0.0'
-      avgItem.sub = '暂无SOH数据'
-      return
-    }
-
-    const pageSize = 200
-    const totalPages = Math.ceil(total / pageSize)
-    let sum = 0
-    let count = 0
-    let highRisk = 0
-    let midRisk = 0
-    let activeCount = 0
-    let replacementCount = 0
-    for (let page = 0; page < totalPages; page++) {
-      const pageResp = await axios.get<BatteryPageResp>('/api/batteries', {
-        params: { page, size: pageSize },
-      })
-      const list = pageResp.data?.content || []
-      for (const row of list) {
-        const v = Number(row?.sohPercent)
-        if (!Number.isNaN(v) && row?.sohPercent != null) {
-          sum += v
-          count += 1
-          if (v < 75) {
-            highRisk += 1
-          } else if (v < 85) {
-            midRisk += 1
-          }
-          if (v < 80) {
-            replacementCount += 1
-          }
-        }
-
-        const ts = row?.lastRecordAt ? Date.parse(row.lastRecordAt) : NaN
-        if (!Number.isNaN(ts) && Date.now() - ts <= ACTIVE_WINDOW_MS) {
-          activeCount += 1
-        }
-      }
-    }
-    const avg = count > 0 ? sum / count : 0
-    avgItem.value = avg.toFixed(1)
-    avgItem.sub = count > 0 ? `基于 ${count} 组电池` : '暂无SOH数据'
-
-    const riskItem = kpiList.value.find(item => item.key === 'risk')
-    if (riskItem) {
-      const totalRisk = highRisk + midRisk
-      riskItem.value = String(totalRisk)
-      if (totalRisk === 0) {
-        riskItem.sub = '暂无风险预警'
-      } else {
-        riskItem.sub = `${highRisk} 高风险 / ${midRisk} 中风险`
-      }
-    }
-
-    const chargingItem = kpiList.value.find(item => item.key === 'charging')
-    if (chargingItem) {
-      chargingItem.value = `${activeCount}/${total}`
-      chargingItem.sub = activeCount > 0 ? `近 5 分钟活跃 ${activeCount} 组` : '近 5 分钟无活跃数据'
-    }
-
-    const replacementItem = kpiList.value.find(item => item.key === 'replacement')
-    if (replacementItem) {
-      replacementItem.value = String(replacementCount)
-      replacementItem.sub = replacementCount > 0 ? `SOH < 80% 建议更换` : '暂无更换建议'
-    }
-  } catch (e) {}
+    updateTotal(total)
+    const rows = await loadAllBatteryRows(total)
+    const metrics = calcMetrics(rows)
+    updateAvgSoh(metrics)
+    updateRisk(metrics)
+    updateActive(metrics, total)
+    updateReplacement(metrics)
+  } catch {}
 }
 
 onMounted(() => {
-  refreshBatteryTotal()
-  totalTimer = window.setInterval(refreshBatteryTotal, 30000)
+  refreshKpiData()
+  totalTimer = window.setInterval(refreshKpiData, 30000)
 })
 
 onUnmounted(() => {
