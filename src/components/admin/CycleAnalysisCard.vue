@@ -38,9 +38,7 @@ const props = defineProps<{
   records: any[]
 }>()
 
-// 为了避免语言服务在模板里“找不到 cycleMax”，显式导出模板可见绑定
 const cycleMax = computed(() => props.cycleMax)
-
 const emit = defineEmits(['update:modelValue', 'change'])
 
 const internalCycle = computed({
@@ -84,7 +82,6 @@ let chartInstance: echarts.ECharts | null = null
 
 const initChart = () => {
   if (chartRef.value) {
-    // EChartsInitOpts 并不包含 backgroundColor
     chartInstance = echarts.init(chartRef.value, 'dark')
     updateChart()
     window.addEventListener('resize', resizeChart)
@@ -108,7 +105,6 @@ const updateChart = () => {
   const voltages = data.map(item => item.voltage)
   const currents = data.map(item => item.current)
 
-  // 避免 ECharts 类型过严导致 editor 爆红；实际仍是 ECharts option 对象
   const option = {
     backgroundColor: 'transparent',
     tooltip: {
