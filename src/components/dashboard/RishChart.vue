@@ -21,33 +21,47 @@ const props = defineProps({
 
 const { chartRef, setOption } = useEchart()
 
+const ACTIVE_WINDOW_MS = 2 * 60 * 1000
+
+const THRESHOLDS = {
+  sohLow: 80,
+  voltageHigh: 4.15,
+  voltageLow: 3.00,
+  temperatureHigh: 35,
+}
+
 // 1. 数据处理逻辑
 const processData = (list: any[]) => {
-  // 如果没数据，使用模拟数据展示效果
-  if (!list || list.length === 0) {
-    return {
-      categories: ['通信中断', '容量过低', '电压异常', '温度过高'],
-      values: [2, 5, 3, 4] // 模拟的报警数量
+  const categories = ['通信中断', '容量过低', '电压异常', '温度过高']
+  if (!list || list.length === 0) return { categories, values: [0, 0, 0, 0] }
+
+  let commCount = 0 // 近 2 分钟无数据
+  let capCount = 0  // SOH < 80%
+  let volCount = 0  // voltage >= 4.15 或 <= 3.00
+  let tempCount = 0 // temperature >= 35
+
+  const now = Date.now()
+
+  list.forEach((item: any) => {
+    // 通信中断：用 lastRecordAt 推断离线（比模拟 status 更可靠）
+    const ts = item?.lastRecordAt ? Date.parse(item.lastRecordAt) : NaN
+    if (Number.isNaN(ts) || now - ts > ACTIVE_WINDOW_MS) commCount += 1
+
+    // 容量过低：用 sohPercent（电池列表已有字段）
+    if (item?.sohPercent != null && Number(item.sohPercent) < THRESHOLDS.sohLow) capCount += 1
+
+    // 电压异常 / 温度过高：只有当列表里真的带了 voltage/temperature 字段时才统计（避免凭空模拟）
+    if (item?.voltage != null) {
+      const v = Number(item.voltage)
+      if (!Number.isNaN(v) && (v >= THRESHOLDS.voltageHigh || v <= THRESHOLDS.voltageLow)) volCount += 1
     }
-  }
-
-  let tempCount = 0   // 温度 > 45
-  let volCount = 0    // 电压 > 4.2 或 < 2.8
-  let capCount = 0    // SOH < 70
-  let commCount = 0   // 假设 status === 'offline'
-
-  list.forEach(item => {
-    // 根据你的实际字段调整判断逻辑
-    if (Number(item.temp) > 45) tempCount++
-    if (Number(item.voltage) > 4.2 || Number(item.voltage) < 2.8) volCount++
-    if (Number(item.soh) < 70) capCount++
-    if (item.status === 'offline') commCount++
+    if (item?.temperature != null) {
+      const t = Number(item.temperature)
+      if (!Number.isNaN(t) && t >= THRESHOLDS.temperatureHigh) tempCount += 1
+    }
   })
 
-  return {
-    categories: ['通信中断', '容量过低', '电压异常', '温度过高'],
-    values: [commCount, capCount, volCount, tempCount]
-  }
+  return { categories, values: [commCount, capCount, volCount, tempCount] }
 }
 
 // 2. 更新图表
