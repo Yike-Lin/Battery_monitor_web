@@ -36,13 +36,6 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '单体电池详情', group: '资产管理' },
       },
 
-      // 资产管理 - 拓扑结构管理
-      {
-        path: 'topology',
-        name: 'TopologyManager',
-        component: () => import('../views/admin/TopologyManager.vue'),
-        meta: { title: '拓扑结构管理', group: '资产管理' },
-      },
     ],
   },
 ]
