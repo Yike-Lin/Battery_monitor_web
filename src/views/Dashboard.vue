@@ -106,6 +106,7 @@ let totalTimer: number | null = null
 const ACTIVE_WINDOW_MS = 5 * 60 * 1000
 const tableData = ref<any[]>([])
 const batteryRows = ref<BatteryRow[]>([])
+let onVisibilityChange: (() => void) | null = null
 
 function getKpiItem(key: string) {
   return kpiList.value.find(item => item.key === key)
@@ -203,15 +204,37 @@ async function refreshKpiData() {
   }
 }
 
+function startPolling() {
+  if (totalTimer != null) return
+  totalTimer = window.setInterval(refreshKpiData, 30000)
+}
+
+function stopPolling() {
+  if (totalTimer == null) return
+  window.clearInterval(totalTimer)
+  totalTimer = null
+}
+
 onMounted(() => {
   refreshKpiData()
-  totalTimer = window.setInterval(refreshKpiData, 30000)
+  startPolling()
+
+  onVisibilityChange = () => {
+    if (document.visibilityState === 'hidden') {
+      stopPolling()
+      return
+    }
+    refreshKpiData()
+    startPolling()
+  }
+  document.addEventListener('visibilitychange', onVisibilityChange)
 })
 
 onUnmounted(() => {
-  if (totalTimer != null) {
-    window.clearInterval(totalTimer)
-    totalTimer = null
+  stopPolling()
+  if (onVisibilityChange) {
+    document.removeEventListener('visibilitychange', onVisibilityChange)
+    onVisibilityChange = null
   }
 })
 </script>
