@@ -3,11 +3,16 @@
     <div class="card-header">
       <div class="header-left">
         <span class="card-title">IC 增量容量分析</span>
+        <span class="cell-tag">当前: {{ currentCellId || '-' }}</span>
       </div>
       <div class="header-right">
+        <div class="pack-switch">
+          <button :class="{ active: selectedPack === 'A' }" @click="switchPack('A')">Pack-A</button>
+          <button :class="{ active: selectedPack === 'B' }" @click="switchPack('B')">Pack-B</button>
+        </div>
         <div class="soh-badge" :class="getHealthColor">
           <span class="label">SOH</span>
-          <span class="value">{{ currentSOH.toFixed(1) }}%</span>
+          <span class="value">{{ currentSOH != null ? currentSOH.toFixed(1) : '--' }}%</span>
         </div>
       </div>
     </div>
@@ -19,44 +24,49 @@
         <span class="line ref-line"></span> Reference (Cycle 1)
       </div>
       <div class="legend-item">
-        <span class="line curr-line"></span> Current (Cycle {{ currentCycle }})
+        <span class="line curr-line"></span> Current (Cycle {{ currentCycle || '-' }})
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, computed, nextTick, toRaw } from 'vue' // 1. 引入 toRaw
+import { onMounted, onUnmounted, ref, computed, nextTick } from 'vue'
+import axios from 'axios'
 import * as echarts from 'echarts'
 import { useEchart } from '@/composables/useEchart'
 
-// 注意：如果你的 useEchart 返回的是 { instance }，这里解构别名要注意
-// 为了安全，直接用 setOption，因为通常已经封装好了
-const { chartRef, setOption, chartInstance } = useEchart() 
+const { chartRef, setOption } = useEchart()
 
-let animationTimer: any = null
-const currentSOH = ref(100.0)
-const currentCycle = ref(1)
-
-// --- 物理模拟参数 ---
-const PEAK_1_V = 3.9
-const PEAK_2_V = 4.15
-
-const generateICCurve = (shift: number, degradation: number, noiseLevel: number) => {
-  const data = []
-  for (let v = 3.5; v <= 4.3; v += 0.01) {
-    const p1 = (1.0 * degradation) * Math.exp(-Math.pow(v - (PEAK_1_V + shift), 2) / (2 * 0.005))
-    const p2 = (0.6 * degradation) * Math.exp(-Math.pow(v - (PEAK_2_V + shift), 2) / (2 * 0.004))
-    let dQdV = p1 + p2 + (Math.random() - 0.5) * noiseLevel
-    dQdV += 0.1
-    data.push([Number(v.toFixed(2)), Number(dQdV.toFixed(3))])
-  }
-  return data
+type StreamResp = { cellIdA?: string; cellIdB?: string }
+type BatteryRow = { batteryCode?: string; sohPercent?: number | null }
+type IcPoint = { voltage?: number; dqdv?: number }
+type IcResp = {
+  cellId?: string
+  refCycle?: number
+  currCycle?: number
+  refCurve?: IcPoint[]
+  currCurve?: IcPoint[]
 }
 
-const referenceData = generateICCurve(0, 1.0, 0)
+const refreshMs = 30000
+let timer: number | null = null
 
-const initChart = () => {
+const selectedPack = ref<'A' | 'B'>('A')
+const cellIdA = ref('')
+const cellIdB = ref('')
+const currentCellId = ref('')
+const currentSOH = ref<number | null>(null)
+const currentCycle = ref<number | null>(null)
+
+const getHealthColor = computed(() => {
+  if (currentSOH.value == null) return 'fair'
+  if (currentSOH.value > 90) return 'good'
+  if (currentSOH.value > 80) return 'fair'
+  return 'poor'
+})
+
+function renderChart(refData: number[][], currData: number[][]) {
   const option: echarts.EChartsOption = {
     backgroundColor: 'transparent',
     grid: { left: '10%', right: '10%', top: '15%', bottom: '15%' },
@@ -82,7 +92,7 @@ const initChart = () => {
       {
         name: 'Reference (BOL)',
         type: 'line',
-        data: referenceData,
+        data: refData,
         symbol: 'none',
         lineStyle: { color: '#555', width: 2, type: 'dashed', opacity: 0.6 },
         z: 1
@@ -90,7 +100,7 @@ const initChart = () => {
       {
         name: 'Current State',
         type: 'line',
-        data: referenceData,
+        data: currData,
         symbol: 'none',
         smooth: 0.3,
         lineStyle: { width: 3, color: '#bd34fe' },
@@ -100,12 +110,6 @@ const initChart = () => {
             { offset: 1, color: 'rgba(189, 52, 254, 0)' }
           ])
         },
-        markPoint: {
-          data: [{ type: 'max', name: 'Main Peak' }],
-          itemStyle: { color: '#fff' },
-          symbolSize: 40,
-          label: { show: true, fontSize: 10, color: '#000', formatter: 'Peak' }
-        },
         z: 2
       }
     ]
@@ -113,58 +117,91 @@ const initChart = () => {
   setOption(option)
 }
 
-// --- 修复重点在 startAgingDemo ---
-let ageTick = 0
-const startAgingDemo = () => {
-  animationTimer = setInterval(() => {
-    ageTick += 0.05
-    
-    // 模拟老化计算
-    const vShift = (Math.sin(ageTick) + 1) * 0.04
-    const degradation = 1.0 - ((Math.sin(ageTick) + 1) * 0.15)
-    currentSOH.value = 100 * degradation
-    currentCycle.value = Math.floor(1 + (Math.sin(ageTick) + 1) * 1000)
-
-    const newData = generateICCurve(vShift, degradation, 0.02)
-
-    // 修复 1: 优先使用 hook 提供的 setOption 函数
-    // 修复 2: 如果必须用实例，必须使用 toRaw 剥离 Vue 的代理，否则会报错 "Main Process"
-    
-    // 方案 A：直接使用 hook 导出的 setOption (它通常已经处理了非空逻辑)
-    setOption({
-      series: [
-        {}, 
-        {
-          data: newData,
-          lineStyle: { color: currentSOH.value > 80 ? '#bd34fe' : '#f56c6c' },
-          areaStyle: {
-             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: currentSOH.value > 80 ? 'rgba(189, 52, 254, 0.4)' : 'rgba(245, 108, 108, 0.4)' },
-              { offset: 1, color: 'transparent' }
-            ])
-          }
-        }
-      ]
-    })
-
-  }, 100)
+function toSeries(list: IcPoint[] | undefined) {
+  return (list || [])
+    .filter(p => p?.voltage != null && p?.dqdv != null)
+    .map(p => [Number(p.voltage), Number(p.dqdv)])
 }
 
-const getHealthColor = computed(() => {
-  if (currentSOH.value > 90) return 'good'
-  if (currentSOH.value > 80) return 'fair'
-  return 'poor'
-})
+async function refreshCellIds() {
+  try {
+    const res = await axios.get<StreamResp>('http://localhost:8080/api/battery-dashboard/stream')
+    cellIdA.value = res.data?.cellIdA || ''
+    cellIdB.value = res.data?.cellIdB || ''
+    currentCellId.value = selectedPack.value === 'A' ? cellIdA.value : cellIdB.value
+  } catch {
+    cellIdA.value = ''
+    cellIdB.value = ''
+    currentCellId.value = ''
+  }
+}
+
+async function refreshIc() {
+  if (!currentCellId.value) {
+    renderChart([], [])
+    currentCycle.value = null
+    currentSOH.value = null
+    return
+  }
+  try {
+    const res = await axios.get<IcResp>('http://localhost:8080/api/battery-dashboard/ic', {
+      params: { cellId: currentCellId.value, smooth: 5 },
+    })
+    const refData = toSeries(res.data?.refCurve)
+    const currData = toSeries(res.data?.currCurve)
+    renderChart(refData, currData)
+    currentCycle.value = res.data?.currCycle ?? null
+    currentSOH.value = null
+  } catch {
+    renderChart([], [])
+    currentCycle.value = null
+    currentSOH.value = null
+  }
+}
+
+async function refreshRealSoh() {
+  if (!currentCellId.value) return
+  try {
+    const resp = await axios.get<{ content?: BatteryRow[] }>('/api/batteries', { params: { page: 0, size: 500 } })
+    const rows = resp.data?.content || []
+    const target = currentCellId.value.toLowerCase()
+    const row = rows.find(r => {
+      const code = (r?.batteryCode || '').toLowerCase()
+      return code === target || code.endsWith(`_${target}`)
+    })
+    if (row?.sohPercent != null) {
+      currentSOH.value = Number(row.sohPercent)
+    }
+  } catch {
+    // ignore - fallback to IC estimated SOH
+  }
+}
+
+async function refreshAll() {
+  await refreshCellIds()
+  await refreshIc()
+  await refreshRealSoh()
+}
+
+async function switchPack(pack: 'A' | 'B') {
+  selectedPack.value = pack
+  currentCellId.value = pack === 'A' ? cellIdA.value : cellIdB.value
+  await refreshIc()
+  await refreshRealSoh()
+}
 
 onMounted(() => {
   nextTick(() => {
-    initChart()
-    startAgingDemo()
+    refreshAll()
+    timer = window.setInterval(refreshAll, refreshMs)
   })
 })
 
 onUnmounted(() => {
-  clearInterval(animationTimer)
+  if (timer != null) {
+    window.clearInterval(timer)
+    timer = null
+  }
 })
 </script>
 
@@ -187,8 +224,33 @@ onUnmounted(() => {
   border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 .card-title { font-size: 13px; font-weight: 700; color: #ccc; }
+.cell-tag {
+  font-size: 11px;
+  color: #999;
+  margin-left: 8px;
+}
 
 /* SOH Badge */
+.pack-switch {
+  display: flex;
+  gap: 6px;
+  margin-right: 10px;
+}
+.pack-switch button {
+  border: 1px solid #444;
+  background: #1c1c1c;
+  color: #bbb;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.pack-switch button.active {
+  border-color: #7c4dff;
+  color: #fff;
+  background: #2a1f4d;
+}
+
 .soh-badge {
   display: flex;
   flex-direction: column;
