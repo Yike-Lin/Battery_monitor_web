@@ -9,16 +9,8 @@
 
 <script setup lang="ts">
 import { onMounted, nextTick, onUnmounted, ref } from 'vue'
-import axios from 'axios'
 import { useEchart } from '@/composables/useEchart'
-
-type BatteryRow = {
-  sohPercent?: number | null
-}
-type BatteryPageResp = {
-  content?: BatteryRow[]
-  totalElements?: number
-}
+import { loadBatteryRows, type BatteryRow } from '@/composables/useBatteryRows'
 
 const { chartRef, setOption } = useEchart()
 const batteryData = ref<BatteryRow[]>([])
@@ -115,28 +107,10 @@ const updateChart = () => {
 
 async function fetchBatterySohData() {
   try {
-    const first = await axios.get<BatteryPageResp>('/api/batteries', {
-      params: { page: 0, size: 1 },
-    })
-    const total = Number(first.data?.totalElements ?? 0)
-    if (total <= 0) {
-      batteryData.value = []
-      updateChart()
-      return
-    }
-
-    const pageSize = 200
-    const pages = Math.ceil(total / pageSize)
-    const rows: BatteryRow[] = []
-    for (let page = 0; page < pages; page++) {
-      const resp = await axios.get<BatteryPageResp>('/api/batteries', {
-        params: { page, size: pageSize },
-      })
-      rows.push(...(resp.data?.content || []))
-    }
+    const rows = await loadBatteryRows()
     batteryData.value = rows
     updateChart()
-  } catch (e) {
+  } catch {
     batteryData.value = []
     updateChart()
   }
