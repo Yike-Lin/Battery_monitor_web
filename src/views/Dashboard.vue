@@ -4,7 +4,7 @@
     <el-row :gutter="16" class="middle-row" style="flex:1;">
       <el-col :span="6" class="side-col">
         <SohChart class="small-card" :battery-data="batteryRows" />
-        <RishChart class="small-card" />
+        <RishChart class="small-card" :battery-data="batteryRows" />
       </el-col>
 
       <el-col :span="12" class="center-col">
@@ -204,6 +204,7 @@ async function refreshKpiData() {
   }
 }
 
+// 页面不可见自动暂停轮询、切回自动恢复
 function startPolling() {
   if (totalTimer != null) return
   totalTimer = window.setInterval(refreshKpiData, 30000)
