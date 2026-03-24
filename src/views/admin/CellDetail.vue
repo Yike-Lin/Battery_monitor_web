@@ -31,9 +31,6 @@
               {{ sohError?.absError != null ? sohError.absError.toFixed(4) : '-' }}
               <span class="unit">({{ sohError?.apePercent != null ? sohError.apePercent.toFixed(2) + '%' : '-' }})</span>
             </div>
-            <div v-if="sohError?.calculable === false && sohError?.reason" class="metric-tip">
-              {{ sohError.reason }}
-            </div>
           </div>
           <div class="metric-item">
             <div class="lbl">额定容量</div>
@@ -139,15 +136,13 @@ type BatteryDetailDto = BatteryListItemDto
 type SohErrorDto = {
   batteryId: number
   batteryCode: string
-  latestCycle: number | null
-  ratedCapacityAh: number | null
-  trueCapacityAh: number | null
-  predSoh: number | null
-  trueSoh: number | null
-  absError: number | null
-  apePercent: number | null
-  calculable: boolean | null
-  reason: string | null
+  latestCycle: number
+  ratedCapacityAh: number
+  trueCapacityAh: number
+  predSoh: number
+  trueSoh: number
+  absError: number
+  apePercent: number
 }
 
 type BatteryRecordDto = {
@@ -291,7 +286,6 @@ async function loadSohError() {
     const resp = await axios.get<SohErrorDto>(`/api/batteries/${id}/soh-error`)
     sohError.value = resp.data || null
   } catch (e: any) {
-    // 某些新电池可能尚未有记录，接口会返回 400，这里兜底展示 '-'
     sohError.value = null
   }
 }
@@ -437,14 +431,6 @@ onMounted(async () => {
   font-size: 11px;
   color: #666;
   font-weight: normal;
-}
-.metric-item .metric-tip {
-  margin-top: 2px;
-  max-width: 180px;
-  font-size: 11px;
-  color: #888;
-  text-align: center;
-  line-height: 1.3;
 }
 
 /* 2. 可视化区域样式 */
