@@ -145,7 +145,7 @@ async function refreshIc() {
   }
   try {
     const res = await axios.get<IcResp>('http://localhost:8080/api/battery-dashboard/ic', {
-      params: { cellId: currentCellId.value, smooth: 5 },
+      params: { cellId: currentCellId.value, smooth: 9 },
     })
     const refData = toSeries(res.data?.refCurve)
     const currData = toSeries(res.data?.currCurve)
