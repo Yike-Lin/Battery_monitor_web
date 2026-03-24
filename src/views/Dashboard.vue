@@ -34,7 +34,6 @@
 
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
-import axios from 'axios'
 import KpiRow from '@/components/dashboard/KpiRow.vue'
 import SohChart from '@/components/dashboard/SohChart.vue'
 import SocChart from '@/components/dashboard/SocChart.vue'
@@ -44,12 +43,8 @@ import CentralMonitor from '@/components/dashboard/CentralMonitor.vue'
 import ICAnalysis from '@/components/dashboard/ICAnalysis.vue'
 import CellMatrix from '@/components/dashboard/CellMatrix.vue'
 import DataCleaning from '@/components/dashboard/DataCleaning.vue'
+import { loadBatteryRows, type BatteryRow } from '@/composables/useBatteryRows'
 
-type BatteryPageResp = {
-  content?: Array<{ sohPercent?: number | null; lastRecordAt?: string | null }>
-  totalElements?: number
-}
-type BatteryRow = { sohPercent?: number | null; lastRecordAt?: string | null }
 type BatteryMetrics = {
   avgSoh: number
   sohCount: number
@@ -122,11 +117,17 @@ function updateTotal(total: number) {
   item.sub = total > 0 ? `已入库 ${total} 组` : '暂无入库电池'
 }
 
-function updateAvgSoh(metrics: BatteryMetrics) {
+function updateAvgSoh(metrics: BatteryMetrics, total: number) {
   const item = getKpiItem('avg_soh')
   if (!item) return
   item.value = metrics.avgSoh.toFixed(1)
-  item.sub = metrics.sohCount > 0 ? `基于 ${metrics.sohCount} 组电池` : '暂无SOH数据'
+  if (total <= 0) {
+    item.sub = '暂无SOH数据'
+    return
+  }
+  item.sub = metrics.sohCount > 0
+    ? `总 ${total} 组（有SOH ${metrics.sohCount} 组）`
+    : `总 ${total} 组（SOH 暂缺）`
 }
 
 function updateRisk(metrics: BatteryMetrics) {
@@ -185,28 +186,13 @@ function calcMetrics(rows: BatteryRow[]): BatteryMetrics {
   }
 }
 
-async function loadAllBatteryRows(total: number) {
-  if (total <= 0) return [] as BatteryRow[]
-  const pageSize = 200
-  const totalPages = Math.ceil(total / pageSize)
-  const rows: BatteryRow[] = []
-  for (let page = 0; page < totalPages; page++) {
-    const pageResp = await axios.get<BatteryPageResp>('/api/batteries', {
-      params: { page, size: pageSize },
-    })
-    rows.push(...(pageResp.data?.content || []))
-  }
-  return rows
-}
-
 async function refreshKpiData() {
   try {
-    const totalResp = await axios.get<BatteryPageResp>('/api/batteries', { params: { page: 0, size: 1 } })
-    const total = Number(totalResp.data?.totalElements ?? 0)
+    const rows = await loadBatteryRows()
+    const total = rows.length
     updateTotal(total)
-    const rows = await loadAllBatteryRows(total)
     const metrics = calcMetrics(rows)
-    updateAvgSoh(metrics)
+    updateAvgSoh(metrics, total)
     updateRisk(metrics)
     updateActive(metrics, total)
     updateReplacement(metrics)
