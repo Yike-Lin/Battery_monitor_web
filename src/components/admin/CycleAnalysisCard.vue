@@ -38,6 +38,9 @@ const props = defineProps<{
   records: any[]
 }>()
 
+// 为了避免语言服务在模板里“找不到 cycleMax”，显式导出模板可见绑定
+const cycleMax = computed(() => props.cycleMax)
+
 const emit = defineEmits(['update:modelValue', 'change'])
 
 const internalCycle = computed({
@@ -81,7 +84,8 @@ let chartInstance: echarts.ECharts | null = null
 
 const initChart = () => {
   if (chartRef.value) {
-    chartInstance = echarts.init(chartRef.value, 'dark', { backgroundColor: 'transparent' })
+    // EChartsInitOpts 并不包含 backgroundColor
+    chartInstance = echarts.init(chartRef.value, 'dark')
     updateChart()
     window.addEventListener('resize', resizeChart)
   }
@@ -104,7 +108,8 @@ const updateChart = () => {
   const voltages = data.map(item => item.voltage)
   const currents = data.map(item => item.current)
 
-  const option: echarts.EChartsOption = {
+  // 避免 ECharts 类型过严导致 editor 爆红；实际仍是 ECharts option 对象
+  const option = {
     backgroundColor: 'transparent',
     tooltip: {
         trigger: 'axis',
@@ -137,7 +142,7 @@ const updateChart = () => {
             interval: 10,
             formatter: (value: string | number) => {
                 const num = Number(value)
-                return isNaN(num) ? value : num.toFixed(0)
+                return isNaN(num) ? String(value) : num.toFixed(0)
             },
         },
     },
@@ -165,7 +170,7 @@ const updateChart = () => {
       { name: '电压 (V)', type: 'line', yAxisIndex: 0, showSymbol: false, smooth: true, itemStyle: { color: '#409eff' }, data: voltages },
       { name: '电流 (A)', type: 'line', yAxisIndex: 1, showSymbol: false, smooth: true, itemStyle: { color: '#67c23a' }, data: currents }
     ]
-  }
+  } as any
   chartInstance.setOption(option, true)
 }
 
