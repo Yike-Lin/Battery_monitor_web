@@ -8,13 +8,12 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, nextTick, onUnmounted, ref } from 'vue'
+import { onMounted, watch } from 'vue'
 import { useEchart } from '@/composables/useEchart'
-import { loadBatteryRows, type BatteryRow } from '@/composables/useBatteryRows'
+import type { BatteryRow } from '@/composables/useBatteryRows'
 
 const { chartRef, setOption } = useEchart()
-const batteryData = ref<BatteryRow[]>([])
-let timer: number | null = null
+const props = defineProps<{ batteryData?: BatteryRow[] }>()
 
 const colors = {
   excellent: '#67c23a',
@@ -47,7 +46,7 @@ const processData = (list: any[]) => {
 }
 
 const updateChart = () => {
-  const chartData = processData(batteryData.value)
+  const chartData = processData(props.batteryData || [])
   const finalData = chartData.length > 0 ? chartData : [
     { value: 1, name: '暂无数据', itemStyle: { color: '#555' } }
   ]
@@ -105,30 +104,11 @@ const updateChart = () => {
   setOption(option)
 }
 
-async function fetchBatterySohData() {
-  try {
-    const rows = await loadBatteryRows()
-    batteryData.value = rows
-    updateChart()
-  } catch {
-    batteryData.value = []
-    updateChart()
-  }
-}
-
 onMounted(() => {
-  nextTick(() => {
-    fetchBatterySohData()
-    timer = window.setInterval(fetchBatterySohData, 30000)
-  })
+  updateChart()
 })
 
-onUnmounted(() => {
-  if (timer != null) {
-    window.clearInterval(timer)
-    timer = null
-  }
-})
+watch(() => props.batteryData, updateChart, { deep: false })
 </script>
 
 <style scoped>

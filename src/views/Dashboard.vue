@@ -3,7 +3,7 @@
     <KpiRow :kpi-list="kpiList" />
     <el-row :gutter="16" class="middle-row" style="flex:1;">
       <el-col :span="6" class="side-col">
-        <SohChart class="small-card" />
+        <SohChart class="small-card" :battery-data="batteryRows" />
         <RishChart class="small-card" />
       </el-col>
 
@@ -12,7 +12,7 @@
       </el-col>
 
       <el-col :span="6" class="side-col">
-        <SocChart class="small-card" />
+        <SocChart class="small-card" :battery-data="batteryRows" />
         <RulChart class="small-card" />
       </el-col>
     </el-row>
@@ -105,6 +105,7 @@ const kpiList = ref([
 let totalTimer: number | null = null
 const ACTIVE_WINDOW_MS = 5 * 60 * 1000
 const tableData = ref<any[]>([])
+const batteryRows = ref<BatteryRow[]>([])
 
 function getKpiItem(key: string) {
   return kpiList.value.find(item => item.key === key)
@@ -189,6 +190,7 @@ function calcMetrics(rows: BatteryRow[]): BatteryMetrics {
 async function refreshKpiData() {
   try {
     const rows = await loadBatteryRows()
+    batteryRows.value = rows
     const total = rows.length
     updateTotal(total)
     const metrics = calcMetrics(rows)
@@ -196,7 +198,9 @@ async function refreshKpiData() {
     updateRisk(metrics)
     updateActive(metrics, total)
     updateReplacement(metrics)
-  } catch {}
+  } catch {
+    batteryRows.value = []
+  }
 }
 
 onMounted(() => {

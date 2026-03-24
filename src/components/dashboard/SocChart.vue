@@ -8,13 +8,12 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, nextTick, onUnmounted, ref } from 'vue'
+import { onMounted, watch } from 'vue'
 import { useEchart } from '@/composables/useEchart'
-import { loadBatteryRows, type BatteryRow } from '@/composables/useBatteryRows'
+import type { BatteryRow } from '@/composables/useBatteryRows'
 
 const { chartRef, setOption } = useEchart()
-const batteryData = ref<BatteryRow[]>([])
-let timer: number | null = null
+const props = defineProps<{ batteryData?: BatteryRow[] }>()
 
 const colors = {
   high: '#34d399',
@@ -45,6 +44,7 @@ const processData = (list: BatteryRow[]) => {
 }
 
 const updateChart = () => {
+  const validRows = (props.batteryData || []).filter(row => row?.soc != null)
   const option = {
     tooltip: {
       trigger: 'item',
@@ -74,37 +74,18 @@ const updateChart = () => {
           label: { show: true, formatter: '{c}', color: '#fff', fontSize: 16, fontWeight: 'bold' },
           itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' }
         },
-        data: processData(batteryData.value)
+        data: processData(validRows)
       }
     ]
   }
   setOption(option)
 }
 
-async function fetchBatterySocData() {
-  try {
-    const rows = await loadBatteryRows()
-    batteryData.value = rows.filter(row => row?.soc != null)
-    updateChart()
-  } catch {
-    batteryData.value = []
-    updateChart()
-  }
-}
-
 onMounted(() => {
-  nextTick(() => {
-    fetchBatterySocData()
-    timer = window.setInterval(fetchBatterySocData, 30000)
-  })
+  updateChart()
 })
 
-onUnmounted(() => {
-  if (timer != null) {
-    window.clearInterval(timer)
-    timer = null
-  }
-})
+watch(() => props.batteryData, updateChart, { deep: false })
 </script>
 
 <style scoped>
