@@ -30,9 +30,6 @@
             <span>单体电池详情</span>
           </el-menu-item>
 
-          <el-menu-item index="/admin/topology">
-            <span>拓扑结构管理</span>
-          </el-menu-item>
         </el-sub-menu>
       </el-menu>
     </el-aside>
