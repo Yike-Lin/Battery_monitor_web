@@ -13,7 +13,7 @@
 
       <el-col :span="6" class="side-col">
         <SocChart class="small-card" :battery-data="batteryRows" />
-        <RulChart class="small-card" />
+        <RulChart class="small-card" :battery-data="batteryRows" />
       </el-col>
     </el-row>
     <el-row :gutter="16" class="bottom-row-container">
