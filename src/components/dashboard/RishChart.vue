@@ -9,7 +9,7 @@
 
 <script setup lang="ts">
 import { onMounted, nextTick, watch, defineProps } from 'vue'
-import * as echarts from 'echarts' // 引入 echarts 为了使用渐变色
+import * as echarts from 'echarts'
 import { useEchart } from '@/composables/useEchart'
 
 const props = defineProps({
@@ -43,11 +43,11 @@ const processData = (list: any[]) => {
   const now = Date.now()
 
   list.forEach((item: any) => {
-    // 通信中断：用 lastRecordAt 推断离线（比模拟 status 更可靠）
+    // 通信中断：用 lastRecordAt 推断离线
     const ts = item?.lastRecordAt ? Date.parse(item.lastRecordAt) : NaN
     if (Number.isNaN(ts) || now - ts > ACTIVE_WINDOW_MS) commCount += 1
 
-    // 容量过低：用 sohPercent（电池列表已有字段）
+    // 容量过低：用 sohPercent
     if (item?.sohPercent != null && Number(item.sohPercent) < THRESHOLDS.sohLow) capCount += 1
 
     // 电压异常 / 温度过高：只有当列表里真的带了 voltage/temperature 字段时才统计（避免凭空模拟）
@@ -77,18 +77,17 @@ const updateChart = () => {
       textStyle: { color: '#fff' },
       axisPointer: { type: 'shadow' }
     },
-    // 布局调整：防止文字被切掉
+    
     grid: {
       left: '3%',
       right: '10%',
       bottom: '3%',
       top: '10%',
-      containLabel: true // 自动计算边距，保证左边的字显示全
+      containLabel: true
     },
     // X轴：数值轴
     xAxis: {
       type: 'value',
-      // 隐藏网格线和坐标轴
       splitLine: { show: false },
       axisLabel: { show: false }
     },
@@ -108,13 +107,12 @@ const updateChart = () => {
         name: '报警数量',
         type: 'bar',
         data: values,
-        barWidth: 12, // 柱子细一点
+        barWidth: 12,
         itemStyle: {
-          borderRadius: [0, 20, 20, 0], // 右边圆角
-          // 漂亮的渐变色：从橙色到红色
+          borderRadius: [0, 20, 20, 0],
           color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-            { offset: 0, color: '#f56c6c' },  // 红
-            { offset: 1, color: '#e6a23c' }   // 橙
+            { offset: 0, color: '#f56c6c' },
+            { offset: 1, color: '#e6a23c' }
           ])
         },
         // 在柱子右侧显示具体数字
@@ -124,7 +122,6 @@ const updateChart = () => {
           color: '#fff',
           fontWeight: 'bold'
         },
-        // 背景柱子（灰色的底），看起来更有质感
         showBackground: true,
         backgroundStyle: {
           color: 'rgba(255, 255, 255, 0.05)',
