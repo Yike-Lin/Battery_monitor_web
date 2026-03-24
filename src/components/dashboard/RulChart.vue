@@ -24,10 +24,9 @@ const { chartRef, setOption } = useEchart()
 // 1. 数据处理：将 RUL 分桶统计
 const processData = (list: any[]) => {
   if (!list || list.length === 0) {
-    // 模拟数据 (单位: 循环次数 Cycles)
     return {
-      categories: ['<50周', '50-200', '200-500', '>500周'],
-      values: [5, 12, 45, 66] // 这里的 '5' 就是急需更换的
+      categories: ['<50次', '50-200', '200-500', '>500次'],
+      values: [0, 0, 0, 0]
     }
   }
 
@@ -38,8 +37,8 @@ const processData = (list: any[]) => {
   let long = 0     // > 500
 
   list.forEach(item => {
-    // 假设你的数据里有 rul 字段，如果没有，用 (soh - 70) * 10 估算一下
-    const val = Number(item.rul || 0)
+    const val = Number(item.rulCycles)
+    if (Number.isNaN(val)) return
 
     if (val < 50) critical++
     else if (val < 200) short++
