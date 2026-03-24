@@ -25,18 +25,17 @@ import { ref, onMounted, onUnmounted, shallowRef, nextTick } from 'vue'
 import * as echarts from 'echarts'
 import axios from 'axios'
 
-// --- 核心状态 ---
 const chartRef = ref<HTMLElement | null>(null)
 const batteryInfoRef = ref<HTMLDivElement | null>(null)
 const myChart = shallowRef<echarts.ECharts | null>(null)
 let timer: any = null
 let resizeObserver: ResizeObserver | null = null
 
-// --- 配置参数 ---
+// 配置参数
 const MAX_POINTS = 60
 const REFRESH_RATE = 500 // 500ms 刷新一次
 
-// --- 数据队列 ---
+// 数据队列
 const dataQueue = {
   time: [] as string[],
   packA_V: [] as number[],
@@ -74,7 +73,7 @@ const startLoop = () => {
     // 请求真实数据
     const next = await fetchRealData()
 
-    // 更新“当前显示电池”
+    // 更新当前显示电池
     if (batteryInfoRef.value) {
       const a = next.cellIdA || '-'
       const b = next.cellIdB || '-'
@@ -91,8 +90,6 @@ const startLoop = () => {
     dataQueue.packB_C.shift(); dataQueue.packB_C.push(next.cb || 0)
 
     // 仅更新必要字段，避免鼠标 tooltip 出现时卡顿
-    // - lazyUpdate: 延迟重绘
-    // - 不重建整个 option（tooltip/grid/axes 配置保持不变）
     myChart.value?.setOption(
       {
         xAxis: [
@@ -121,7 +118,7 @@ const initChart = () => {
   const option: echarts.EChartsOption = {
     backgroundColor: 'transparent',
 
-    animation: false, // 开启动画
+    animation: false,
 
     tooltip: {
       trigger: 'axis',
@@ -131,7 +128,7 @@ const initChart = () => {
       borderColor: '#333',
       textStyle: { color: '#eee', fontSize: 12 },
       axisPointer: { type: 'cross', label: { backgroundColor: '#6a7985' } },
-      // 注意：formatter 会在鼠标移动时频繁触发，尽量保持轻量
+      // formatter 会在鼠标移动时频繁触发，保持轻量
       formatter: (params: any) => {
         const p0 = params?.[0]
         const p1 = params?.[1]
@@ -144,7 +141,6 @@ const initChart = () => {
         const bv = p2?.value ?? 0
         const bc = p3?.value ?? 0
 
-        // 纯字符串，避免复杂 DOM 布局计算
         return [
           `<div style="margin-bottom:4px;color:#aaa;font-size:11px">${t}</div>`,
           `<div style="color:#74f2ce;font-weight:bold;font-size:11px">PACK A</div>`,
