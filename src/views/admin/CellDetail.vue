@@ -26,6 +26,16 @@
             <div class="val">{{ battery?.sohPercent ?? '-' }} <span class="unit">%</span></div>
           </div>
           <div class="metric-item">
+            <div class="lbl">SOH误差</div>
+            <div class="val" :class="{ err: sohError?.absError != null && sohError.absError > 0.05 }">
+              {{ sohError?.absError != null ? sohError.absError.toFixed(4) : '-' }}
+              <span class="unit">({{ sohError?.apePercent != null ? sohError.apePercent.toFixed(2) + '%' : '-' }})</span>
+            </div>
+            <div v-if="sohError?.calculable === false && sohError?.reason" class="metric-tip">
+              {{ sohError.reason }}
+            </div>
+          </div>
+          <div class="metric-item">
             <div class="lbl">额定容量</div>
             <div class="val">{{ battery?.ratedCapacityAh?.toFixed(2) ?? '-' }} <span class="unit">Ah</span></div>
           </div>
@@ -126,6 +136,20 @@ type BatteryListItemDto = {
 
 type BatteryDetailDto = BatteryListItemDto
 
+type SohErrorDto = {
+  batteryId: number
+  batteryCode: string
+  latestCycle: number | null
+  ratedCapacityAh: number | null
+  trueCapacityAh: number | null
+  predSoh: number | null
+  trueSoh: number | null
+  absError: number | null
+  apePercent: number | null
+  calculable: boolean | null
+  reason: string | null
+}
+
 type BatteryRecordDto = {
   id: number | null
   batteryId: number
@@ -159,6 +183,7 @@ const cyclePoint = ref<number>(1)
 const cycleMax = ref<number>(1)
 
 const records = ref<BatteryRecordDto[]>([])
+const sohError = ref<SohErrorDto | null>(null)
 
 // 保留三位小数的格式化函数
 const formatDecimal = (row: any, column: any, cellValue: any) => {
@@ -175,14 +200,14 @@ const packMetaText = computed(() => {
 
 const lifecyclePoints = ref<{ cycle: number; capacityAh: number | null }[]>([])
 
-function statusText(s?: Status) {
+function statusText(s?: Status | null) {
   if (!s) return '—'
   if (s === 1) return '在役'
   if (s === 2) return '维护'
   return '退役'
 }
 
-function statusTagType(s?: Status) {
+function statusTagType(s?: Status | null) {
   if (!s) return 'info'
   if (s === 1) return 'success'
   if (s === 2) return 'warning'
@@ -259,10 +284,23 @@ async function loadRecordsByCycle(cycle: number) {
   }
 }
 
+async function loadSohError() {
+  const id = currentId.value
+  if (!id) return
+  try {
+    const resp = await axios.get<SohErrorDto>(`/api/batteries/${id}/soh-error`)
+    sohError.value = resp.data || null
+  } catch (e: any) {
+    // 某些新电池可能尚未有记录，接口会返回 400，这里兜底展示 '-'
+    sohError.value = null
+  }
+}
+
 // 刷新
 async function refresh() {
   const id = await loadBatteryDetail()
   if (id) {
+    await loadSohError()
     await loadRecordsByCycle(cyclePoint.value)
     await loadLifecycleTrend()
   }
@@ -299,6 +337,7 @@ onMounted(async () => {
   
   // 2. 只有 ID 存在才加载下面的图表
   if (id) {
+    await loadSohError()
     await loadRecordsByCycle(cyclePoint.value)
     await loadLifecycleTrend()
   }
@@ -387,6 +426,9 @@ onMounted(async () => {
   color: #409eff;
   margin-top: 2px;
 }
+.metric-item .val.err {
+  color: #f56c6c;
+}
 .metric-item .val.date {
   font-size: 14px;
   color: #ccc;
@@ -395,6 +437,14 @@ onMounted(async () => {
   font-size: 11px;
   color: #666;
   font-weight: normal;
+}
+.metric-item .metric-tip {
+  margin-top: 2px;
+  max-width: 180px;
+  font-size: 11px;
+  color: #888;
+  text-align: center;
+  line-height: 1.3;
 }
 
 /* 2. 可视化区域样式 */
