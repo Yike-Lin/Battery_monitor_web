@@ -5,6 +5,7 @@ export type BatteryRow = {
   soc?: number | null
   voltage?: number | null
   temperature?: number | null
+  rulCycles?: number | null
   lastRecordAt?: string | null
 }
 
