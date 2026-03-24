@@ -1,0 +1,88 @@
+/* --- 通用 Bento 卡片UI风格:玻璃 + 圆角 + 阴影 + header --- */
+.bento-card {
+    background: rgba(30, 30, 30, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    color: #f5f5f7;
+    transition: border-color 0.2s ease;
+  }
+  
+  .bento-card:hover {
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+  
+  /* 卡片头 */
+  .card-header {
+    height: 48px;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  
+  .card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #f5f5f7;
+    letter-spacing: 0.5px;
+  }
+  
+  .view-all {
+    font-size: 12px;
+    color: #86868b;
+    cursor: pointer;
+  }
+  
+  /* “Live” 标签 */
+  .status-tag {
+    font-size: 10px;
+    background: #30d158;
+    color: #000;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 700;
+  }
+  
+  /* 通用图表容器 */
+  .chart-container {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    padding: 10px;
+    box-sizing: border-box;
+  }
+  
+  /* 表格容器 */
+  .apple-table-wrapper {
+    flex: 1;
+    padding: 0 10px 10px 10px;
+    overflow: hidden;
+  }
+  
+  /* Element Plus 表格苹果风 */
+  .apple-table-wrapper .el-table {
+    background-color: transparent !important;
+    color: #f5f5f7;
+    --el-table-border-color: rgba(255, 255, 255, 0.05);
+    --el-table-header-bg-color: transparent;
+    --el-table-tr-bg-color: transparent;
+    --el-table-row-hover-bg-color: rgba(255, 255, 255, 0.08) !important;
+  }
+  
+  .apple-table-wrapper .el-table th.el-table__cell {
+    background: transparent !important;
+    color: #86868b;
+    font-weight: 500;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+  
+  .apple-table-wrapper .el-table td.el-table__cell {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  }
