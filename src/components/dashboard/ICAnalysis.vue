@@ -6,9 +6,11 @@
         <span class="cell-tag">当前: {{ currentCellId || '-' }}</span>
       </div>
       <div class="header-right">
-        <div class="pack-switch">
-          <button :class="{ active: selectedPack === 'A' }" @click="switchPack('A')">Pack-A</button>
-          <button :class="{ active: selectedPack === 'B' }" @click="switchPack('B')">Pack-B</button>
+        <div class="pack-switch-wrap">
+          <div class="pack-switch">
+            <button :class="{ active: selectedPack === 'A' }" @click="switchPack('A')">Pack-A</button>
+            <button :class="{ active: selectedPack === 'B' }" @click="switchPack('B')">Pack-B</button>
+          </div>
         </div>
         <div class="soh-badge" :class="getHealthColor">
           <span class="label">SOH</span>
@@ -229,12 +231,22 @@ onUnmounted(() => {
   color: #999;
   margin-left: 8px;
 }
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
 
 /* SOH Badge */
+.pack-switch-wrap {
+  display: flex;
+  align-items: center;
+  margin-right: 4px;
+}
 .pack-switch {
   display: flex;
   gap: 6px;
-  margin-right: 10px;
 }
 .pack-switch button {
   border: 1px solid #444;
