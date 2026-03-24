@@ -3,6 +3,8 @@ import axios from 'axios'
 export type BatteryRow = {
   sohPercent?: number | null
   soc?: number | null
+  voltage?: number | null
+  temperature?: number | null
   lastRecordAt?: string | null
 }
 
