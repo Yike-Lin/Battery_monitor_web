@@ -71,7 +71,7 @@ function applySnapshot(s: TopologySnapshot | null | undefined) {
 
 async function fetchSnapshot() {
   try {
-    const res = await axios.get<TopologySnapshot>('http://localhost:8080/api/battery-dashboard/topology/snapshot')
+    const res = await axios.get<TopologySnapshot>('/api/battery-dashboard/topology/snapshot')
     applySnapshot(res.data)
   } catch {
     // ignore
@@ -98,15 +98,15 @@ const barWidth = (v?: number | null) => {
 
 function connectStream() {
   if (eventSource) eventSource.close()
-  eventSource = new EventSource('http://localhost:8080/api/battery-dashboard/topology/stream')
-  eventSource.onmessage = (ev) => {
+  eventSource = new EventSource('/api/battery-dashboard/topology/stream')
+  eventSource.addEventListener('snapshot', (ev: MessageEvent) => {
     try {
-      const payload = JSON.parse(ev.data)
+      const payload = JSON.parse(ev.data) as TopologySnapshot
       applySnapshot(payload)
     } catch {
       // ignore invalid event
     }
-  }
+  })
   eventSource.onerror = () => {
     if (eventSource) {
       eventSource.close()
