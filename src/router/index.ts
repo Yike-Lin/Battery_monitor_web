@@ -36,7 +36,7 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '单体电池详情', group: '资产管理' },
       },
 
-      // 资产管理 - SOH 标注
+      // 资产管理 - 电池SOH 标注
       {
         path: 'soh-label',
         name: 'SohLabel',
