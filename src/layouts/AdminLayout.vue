@@ -26,7 +26,7 @@
           </el-menu-item>
 
           <el-menu-item index="/admin/soh-label">
-            <span>SOH标注</span>
+            <span>电池SOH标注</span>
           </el-menu-item>
           
           
