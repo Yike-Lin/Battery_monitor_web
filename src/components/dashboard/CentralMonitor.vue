@@ -57,6 +57,21 @@ const fetchRealData = async () => {
   }
 }
 
+function formatTimeLabel(timeStr: string | undefined) {
+  // 兼容旧代码：不再使用后端 time（秒级），改用相对时间显示
+  void timeStr
+  return ''
+}
+
+// 相对时间显示：首个推进队列时记录起点，后续显示 +X.Ys
+let startAtMs = 0
+function formatRelTimeLabel(nowMs: number) {
+  if (!startAtMs) startAtMs = nowMs
+  const relSec = (nowMs - startAtMs) / 1000
+  const sign = relSec >= 0 ? '+' : ''
+  return `${sign}${relSec.toFixed(1)}s`
+}
+
 // 初始化填空数据
 const initData = () => {
   for (let i = 0; i < MAX_POINTS; i++) {
@@ -73,6 +88,8 @@ const startLoop = () => {
   timer = setInterval(async () => {
     // 请求真实数据
     const next = await fetchRealData()
+    const now = Date.now()
+    if (!startAtMs) startAtMs = now
 
     // 更新当前显示电池
     if (batteryInfoRef.value) {
@@ -82,7 +99,8 @@ const startLoop = () => {
     }
 
     // 队列操作
-    dataQueue.time.shift(); dataQueue.time.push(next.time)
+    dataQueue.time.shift()
+    dataQueue.time.push(formatRelTimeLabel(now))
 
     // 如果后端返回 null (没数据), 赋 0 或者保持上一个值
     dataQueue.packA_V.shift(); dataQueue.packA_V.push(next.va || 0)
