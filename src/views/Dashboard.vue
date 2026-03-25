@@ -22,7 +22,7 @@
       </el-col>
 
       <el-col :span="12" class="bottom-center">
-        <CellMatrix :table-data="tableData" />
+        <CellMatrix />
       </el-col>
 
       <el-col :span="6" class="bottom-right">
@@ -104,7 +104,6 @@ const kpiList = ref([
 
 let totalTimer: number | null = null
 const ACTIVE_WINDOW_MS = 5 * 60 * 1000
-const tableData = ref<any[]>([])
 const batteryRows = ref<BatteryRow[]>([])
 let onVisibilityChange: (() => void) | null = null
 
