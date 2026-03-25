@@ -58,7 +58,7 @@ const fetchRealData = async () => {
 }
 
 function formatTimeLabel(timeStr: string | undefined) {
-  // 兼容旧代码：不再使用后端 time（秒级），改用相对时间显示
+  // 不再使用后端 time（秒级），改用相对时间显示
   void timeStr
   return ''
 }
