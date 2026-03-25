@@ -71,6 +71,7 @@ function applySnapshot(s: TopologySnapshot | null | undefined) {
 
 async function fetchSnapshot() {
   try {
+    // 获取PACK 拓扑矩阵监控数据
     const res = await axios.get<TopologySnapshot>('/api/battery-dashboard/topology/snapshot')
     applySnapshot(res.data)
   } catch {
@@ -98,6 +99,7 @@ const barWidth = (v?: number | null) => {
 
 function connectStream() {
   if (eventSource) eventSource.close()
+  // 获取PACK 拓扑矩阵监控数据
   eventSource = new EventSource('/api/battery-dashboard/topology/stream')
   eventSource.addEventListener('snapshot', (ev: MessageEvent) => {
     try {
