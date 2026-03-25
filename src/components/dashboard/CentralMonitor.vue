@@ -4,6 +4,7 @@
       <div class="header-left">
         <span class="card-title">双通道实时遥测 (V/A)</span>
         <span class="live-tag">● LIVE</span>
+        <span class="denoise-tag" title="电压/电流经后端在线平滑，与拓扑/列表同源">降噪</span>
         <div class="current-batteries" ref="batteryInfoRef"></div>
       </div>
       <div class="header-right">
@@ -47,7 +48,7 @@ const dataQueue = {
 const fetchRealData = async () => {
   try {
     // 不传 idA/idB，后端自动从 InfluxDB 选择最新的电池作为双通道数据源
-    const res = await axios.get('http://localhost:8080/api/battery-dashboard/stream')
+    const res = await axios.get('/api/battery-dashboard/stream')
     return res.data // 返回后端给的 { time, va, ca, vb, cb }
   } catch (err) {
     console.error("Fetch error:", err)
@@ -236,6 +237,15 @@ onUnmounted(() => {
   padding: 2px 6px; border-radius: 4px;
   font-weight: bold;
   animation: pulse 2s infinite;
+}
+
+.denoise-tag {
+  font-size: 9px;
+  color: #95d475;
+  background: rgba(149, 212, 117, 0.12);
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
 }
 
 .current-batteries {
