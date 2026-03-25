@@ -3,70 +3,139 @@
     <div class="card-header">
       <div class="header-left">
         <span class="card-title">PACK 拓扑矩阵监控</span>
-        <span class="sub-tag">32 CELLS / SERIES</span>
+        <span class="sub-tag">{{ packId || 'N/A' }} / {{ displayedCells.length }} CELLS</span>
       </div>
       <div class="header-right">
         <div class="legend">
-          <span class="dot normal"></span> Norm
-          <span class="dot balance"></span> Bal
-          <span class="dot warn"></span> Err
+          <span class="dot normal"></span> Normal
+          <span class="dot warn"></span> Warn
+          <span class="dot alarm"></span> Alarm
         </div>
       </div>
     </div>
 
-    <div class="matrix-container">
+    <div class="matrix-container" :style="matrixStyle">
       <div
-        v-for="(cell, i) in cells"
-        :key="i"
+        v-for="cell in displayedCells"
+        :key="cell.cellId"
         class="cell-unit"
         :class="getCellClass(cell.status)"
       >
         <div class="cell-inner">
-          <span class="cell-id">#{{ i + 1 }}</span>
-          <span class="cell-val">{{ cell.volts.toFixed(2) }}V</span>
+          <span class="cell-id">{{ cell.cellId }}</span>
+          <span class="cell-val">{{ formatV(cell.voltage) }}</span>
         </div>
-        <div class="cell-bar" :style="{ width: (cell.volts / 4.2) * 100 + '%' }"></div>
+        <div class="cell-bar" :style="{ width: barWidth(cell.voltage) }"></div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { reactive, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
+import axios from 'axios'
 
-const cells = reactive(Array.from({ length: 32 }, () => ({ status: 'normal', volts: 3.7 })))
-let timer: any = null
+type TopologyCell = {
+  cellId: string
+  status: 'normal' | 'warn' | 'alarm'
+  voltage?: number | null
+}
+type TopologySnapshot = {
+  packId?: string | null
+  cells?: TopologyCell[]
+}
 
-// 模拟数据跳动
-const updateCells = () => {
-  // 随机挑选几个电芯进行状态变化
-  const targetIdx = Math.floor(Math.random() * 32)
-  const rand = Math.random()
+const packId = ref<string>('')
+const cells = ref<TopologyCell[]>([])
+const MAX_CELLS = 20
+let eventSource: EventSource | null = null
+let reconnectTimer: number | null = null
 
-  // 恢复之前的状态
-  cells.forEach(c => { if(Math.random() > 0.3) c.status = 'normal' })
+const displayedCells = computed(() => cells.value.slice(0, MAX_CELLS))
 
-  if (rand > 0.9) cells[targetIdx].status = 'warn'
-  else if (rand > 0.7) cells[targetIdx].status = 'balancing'
+const matrixStyle = computed(() => {
+  const n = displayedCells.value.length
+  if (n <= 0) return { gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }
+  // 小规模时格子更大；最大 20 块时接近 5 列布局
+  if (n <= 4) return { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }
+  if (n <= 9) return { gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }
+  if (n <= 16) return { gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }
+  return { gridTemplateColumns: 'repeat(5, minmax(0, 1fr))' }
+})
 
-  // 模拟电压微小波动
-  cells.forEach(c => {
-    c.volts = 3.6 + Math.random() * 0.6 // 3.6 ~ 4.2V
-  })
+function applySnapshot(s: TopologySnapshot | null | undefined) {
+  if (!s) return
+  packId.value = s.packId || ''
+  cells.value = (s.cells || []).slice()
+}
+
+async function fetchSnapshot() {
+  try {
+    const res = await axios.get<TopologySnapshot>('http://localhost:8080/api/battery-dashboard/topology/snapshot')
+    applySnapshot(res.data)
+  } catch {
+    // ignore
+  }
 }
 
 const getCellClass = (status: string) => {
+  if (status === 'alarm') return 'status-alarm'
   if (status === 'warn') return 'status-warn'
-  if (status === 'balancing') return 'status-bal'
   return ''
 }
 
+const formatV = (v?: number | null) => {
+  if (v == null || Number.isNaN(Number(v))) return '--'
+  return `${Number(v).toFixed(3)}V`
+}
+
+const barWidth = (v?: number | null) => {
+  const n = Number(v)
+  if (Number.isNaN(n) || n <= 0) return '0%'
+  const pct = Math.max(0, Math.min(100, (n / 4.2) * 100))
+  return `${pct}%`
+}
+
+function connectStream() {
+  if (eventSource) eventSource.close()
+  eventSource = new EventSource('http://localhost:8080/api/battery-dashboard/topology/stream')
+  eventSource.onmessage = (ev) => {
+    try {
+      const payload = JSON.parse(ev.data)
+      applySnapshot(payload)
+    } catch {
+      // ignore invalid event
+    }
+  }
+  eventSource.onerror = () => {
+    if (eventSource) {
+      eventSource.close()
+      eventSource = null
+    }
+    if (reconnectTimer == null) {
+      reconnectTimer = window.setTimeout(() => {
+        reconnectTimer = null
+        fetchSnapshot()
+        connectStream()
+      }, 3000)
+    }
+  }
+}
+
 onMounted(() => {
-  timer = setInterval(updateCells, 800)
+  fetchSnapshot()
+  connectStream()
 })
 
 onUnmounted(() => {
-  clearInterval(timer)
+  if (eventSource) {
+    eventSource.close()
+    eventSource = null
+  }
+  if (reconnectTimer != null) {
+    window.clearTimeout(reconnectTimer)
+    reconnectTimer = null
+  }
 })
 </script>
 
@@ -92,17 +161,17 @@ onUnmounted(() => {
 .legend { display: flex; gap: 8px; font-size: 10px; color: #888; }
 .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
 .dot.normal { background: rgba(255,255,255,0.2); }
-.dot.balance { background: #409eff; box-shadow: 0 0 5px #409eff; }
 .dot.warn { background: #f56c6c; box-shadow: 0 0 5px #f56c6c; }
+.dot.alarm { background: #ff2d2d; box-shadow: 0 0 6px #ff2d2d; }
 
-/* 矩阵布局: 8列 x 4行 */
 .matrix-container {
   flex: 1;
   padding: 10px;
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  grid-template-rows: repeat(4, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
   gap: 8px;
+  overflow: auto;
 }
 
 .cell-unit {
@@ -119,15 +188,22 @@ onUnmounted(() => {
 }
 
 .cell-inner { z-index: 2; text-align: center; }
-.cell-id { font-size: 9px; color: #555; display: block; margin-bottom: 2px; }
+.cell-id {
+  font-size: 9px;
+  color: #777;
+  display: block;
+  margin-bottom: 2px;
+  max-width: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .cell-val { font-size: 11px; color: #ccc; font-family: 'Courier New', monospace; font-weight: bold; }
-
-/* 状态样式 */
-.status-bal { border-color: #409eff; background: rgba(64, 158, 255, 0.1); }
-.status-bal .cell-val { color: #409eff; }
 
 .status-warn { border-color: #f56c6c; background: rgba(245, 108, 108, 0.15); animation: flash 1s infinite; }
 .status-warn .cell-val { color: #f56c6c; }
+.status-alarm { border-color: #ff2d2d; background: rgba(255, 45, 45, 0.22); animation: flash 0.7s infinite; }
+.status-alarm .cell-val { color: #ff8080; }
 
 /* 底部进度条 */
 .cell-bar {
