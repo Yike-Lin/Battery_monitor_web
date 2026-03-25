@@ -23,18 +23,37 @@
 
           <el-form :model="form" label-width="90px" class="form-dark" @submit.prevent>
             <el-form-item label="电池ID">
-              <el-input v-model="form.batteryCode" placeholder="例如：batch2_b1c12" clearable />
+              <el-input
+                v-model="form.batteryCode"
+                placeholder="例如：batch2_b1c12"
+                clearable
+                @keyup.enter="loadPredicted"
+              />
             </el-form-item>
 
             <el-form-item label="SOH(%)">
               <el-input-number v-model="form.sohPercent" :min="0" :max="100" :step="0.1" controls-position="right" style="width: 100%" />
             </el-form-item>
 
+            <div class="predicted-row">
+              <span class="muted">预测值：</span>
+              <span class="mono">
+                {{ predictedSohPercent != null ? predictedSohPercent.toFixed(2) + '%' : '—' }}
+              </span>
+            </div>
+
             <el-form-item label="备注">
               <el-input v-model="form.note" type="textarea" :rows="3" placeholder="可选：标注原因/来源" />
             </el-form-item>
 
             <div class="form-actions">
+              <el-button
+                type="primary"
+                :loading="predictLoading"
+                @click="loadPredicted"
+              >
+                获取预测 SOH
+              </el-button>
               <el-button type="primary" :disabled="saving" @click="onSaveClick">
                 保存标注
               </el-button>
@@ -72,6 +91,7 @@
 </template>
 
 <script setup lang="ts">
+import axios from 'axios'
 import { reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 
@@ -88,6 +108,70 @@ const form = reactive<SohLabelForm>({
 })
 
 const saving = ref(false)
+const predictLoading = ref(false)
+const predictedSohPercent = ref<number | null>(null)
+
+let inFlightPredict: Promise<void> | null = null
+
+type BatteryListPageResp = {
+  content?: Array<{
+    id: number
+    batteryCode?: string
+    sohPercent?: number | null
+  }>
+}
+
+async function loadPredicted() {
+  if (inFlightPredict) return
+
+  const code = (form.batteryCode || '').trim()
+  if (!code) {
+    ElMessage.warning('请先填写电池ID')
+    return
+  }
+
+  predictLoading.value = true
+  predictedSohPercent.value = predictedSohPercent.value
+
+  inFlightPredict = (async () => {
+    try {
+      // 复用台账列表的 SOH 预测结果：/api/batteries 会直接返回 sohPercent
+      const resp = await axios.get<BatteryListPageResp>('/api/batteries', {
+        params: { page: 0, size: 10, batteryCode: code },
+      })
+
+      const row = resp.data?.content?.[0]
+      if (!row) {
+        ElMessage.error(`未找到电池：${code}`)
+        predictedSohPercent.value = null
+        form.sohPercent = null
+        return
+      }
+
+      if (row.sohPercent != null) {
+        const v = Number(row.sohPercent)
+        predictedSohPercent.value = v
+        form.sohPercent = v
+        return
+      }
+
+      // sohPercent 为空时：复用后端预测入口 /{id}/soh-recalculate
+      const updated = await axios.post(`/api/batteries/${row.id}/soh-recalculate`)
+      const soh = updated.data?.sohPercent != null ? Number(updated.data.sohPercent) : null
+      predictedSohPercent.value = soh
+      form.sohPercent = soh
+    } catch (e: any) {
+      const msg = e?.response?.data || e?.message || '获取预测失败'
+      ElMessage.error(msg)
+    }
+  })()
+    .finally(() => {
+      inFlightPredict = null
+      predictLoading.value = false
+    })
+
+  return inFlightPredict
+}
 
 const onSaveClick = async () => {
   saving.value = true
@@ -102,6 +186,7 @@ const onResetClick = () => {
   form.batteryCode = ''
   form.sohPercent = null
   form.note = ''
+  predictedSohPercent.value = null
 }
 </script>
 
@@ -238,6 +323,25 @@ const onResetClick = () => {
   color: #a0a0a0;
   font-size: 12px;
   line-height: 24px;
+}
+
+.predicted-row {
+  margin-top: -4px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.muted {
+  color: #9aa3af;
+  font-size: 12px;
+}
+
+.mono {
+  color: #e5e7eb;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
 }
 </style>
 
