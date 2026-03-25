@@ -25,6 +25,10 @@
             <span>电池台账列表</span>
           </el-menu-item>
 
+          <el-menu-item index="/admin/soh-label">
+            <span>SOH标注</span>
+          </el-menu-item>
+          
           
           <el-menu-item :index="`/admin/cell-detail/${demoPackId}`">
             <span>单体电池详情</span>
