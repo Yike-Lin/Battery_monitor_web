@@ -42,6 +42,19 @@
               </span>
             </div>
 
+            <el-form-item label="来源">
+              <el-select v-model="form.source" placeholder="请选择" size="large" style="width: 100%">
+                <el-option label="人工标注" value="manual" />
+                <el-option label="实验室结果" value="lab" />
+                <el-option label="模型预测" value="predicted" />
+                <el-option label="导入/迁移" value="imported" />
+              </el-select>
+            </el-form-item>
+
+            <el-form-item label="模型版本">
+              <el-input v-model="form.modelVersion" placeholder="例如：model_v1 / sohnet_2026_03" clearable />
+            </el-form-item>
+
             <el-form-item label="备注">
               <el-input v-model="form.note" type="textarea" :rows="3" placeholder="可选：标注原因/来源" />
             </el-form-item>
@@ -98,12 +111,16 @@ import { ElMessage } from 'element-plus'
 type SohLabelForm = {
   batteryCode: string
   sohPercent: number | null
+  source: string
+  modelVersion: string
   note: string
 }
 
 const form = reactive<SohLabelForm>({
   batteryCode: '',
   sohPercent: null,
+  source: 'manual',
+  modelVersion: '',
   note: '',
 })
 
@@ -174,9 +191,32 @@ async function loadPredicted() {
 }
 
 const onSaveClick = async () => {
+  if (!form.batteryCode.trim()) {
+    ElMessage.warning('请填写电池ID')
+    return
+  }
+  if (form.sohPercent == null) {
+    ElMessage.warning('请填写 SOH(%)')
+    return
+  }
+
   saving.value = true
   try {
-    ElMessage.warning('SOH标注功能开发中：保存逻辑暂未接入后端。')
+    const payload = {
+      batteryCode: form.batteryCode.trim(),
+      sohPercent: form.sohPercent,
+      source: form.source,
+      modelVersion: form.modelVersion ? form.modelVersion.trim() : null,
+      predictedSohPercent: predictedSohPercent.value,
+      note: form.note ? form.note.trim() : null,
+    }
+
+    await axios.post('/api/batteries/soh-annotations', payload)
+    ElMessage.success('保存标注成功')
+    onResetClick()
+  } catch (e: any) {
+    const msg = e?.response?.data || e?.message || '保存失败'
+    ElMessage.error(msg)
   } finally {
     saving.value = false
   }
@@ -186,6 +226,8 @@ const onResetClick = () => {
   form.batteryCode = ''
   form.sohPercent = null
   form.note = ''
+  form.source = 'manual'
+  form.modelVersion = ''
   predictedSohPercent.value = null
 }
 </script>
