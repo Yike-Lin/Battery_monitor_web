@@ -127,7 +127,7 @@ function toSeries(list: IcPoint[] | undefined) {
 
 async function refreshCellIds() {
   try {
-    const res = await axios.get<StreamResp>('http://localhost:8080/api/battery-dashboard/stream')
+    const res = await axios.get<StreamResp>('/api/battery-dashboard/stream')
     cellIdA.value = res.data?.cellIdA || ''
     cellIdB.value = res.data?.cellIdB || ''
     currentCellId.value = selectedPack.value === 'A' ? cellIdA.value : cellIdB.value
@@ -146,7 +146,7 @@ async function refreshIc() {
     return
   }
   try {
-    const res = await axios.get<IcResp>('http://localhost:8080/api/battery-dashboard/ic', {
+    const res = await axios.get<IcResp>('/api/battery-dashboard/ic', {
       params: { cellId: currentCellId.value, smooth: 9 },
     })
     const refData = toSeries(res.data?.refCurve)
