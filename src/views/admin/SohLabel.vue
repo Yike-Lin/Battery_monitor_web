@@ -68,9 +68,6 @@
               <el-button :disabled="saving" @click="onResetClick">重置</el-button>
             </div>
 
-            <div class="hint">
-              点击“保存标注”后会写入后端 `soh_annotation` 表（标注来源/模型版本可追溯）。
-            </div>
           </el-form>
         </el-card>
       </el-col>
@@ -146,6 +143,7 @@ const predictedSohPercent = ref<number | null>(null)
 
 let inFlightPredict: Promise<void> | null = null
 
+// 保存结果列表项
 type SohSavedItem = {
   id: number
   batteryCode: string
@@ -171,6 +169,7 @@ function formatCreatedAt(iso: string) {
   }
 }
 
+// 拉取 SOH 标注记录（添加顺序：createdAt 升序）
 async function loadSaved(limit = 2000) {
   if (inFlightLoadSaved) return
   savedLoading.value = true
@@ -297,7 +296,8 @@ const onSaveClick = async () => {
       note: form.note ? form.note.trim() : null,
     }
 
-    ElMessage.success('保存标注成功')
+    const resp = await axios.post('/api/batteries/soh-annotations', payload)
+    ElMessage.success('保存标注成功' + (resp.data != null ? `（id=${resp.data}）` : ''))
     onResetClick()
 
     await loadSaved()
@@ -532,11 +532,6 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 
-.hint {
-  margin-top: 10px;
-  color: #9aa3af;
-  font-size: 12px;
-}
 
 .desc {
   color: #a0a0a0;
