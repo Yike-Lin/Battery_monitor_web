@@ -1,17 +1,5 @@
 <template>
   <div class="page">
-    <el-card class="card compact-header" shadow="never">
-      <div class="head">
-        <div class="head-title">
-          <span class="title">电池SOH标注</span>
-          <el-tag type="info" effect="dark" size="small" class="tag">
-            功能开发中
-          </el-tag>
-        </div>
-        <div class="head-sub">用于人工/算法标注电池 SOH 相关标签，便于后续训练与评估。</div>
-      </div>
-    </el-card>
-
     <el-row :gutter="16" class="section">
       <el-col :span="10">
         <el-card class="card" shadow="never">
@@ -21,7 +9,7 @@
             </div>
           </template>
 
-          <el-form :model="form" label-width="90px" class="form-dark" @submit.prevent>
+          <el-form :model="form" label-width="90px" class="filter-dark" @submit.prevent>
             <el-form-item label="电池ID">
               <el-input
                 v-model="form.batteryCode"
@@ -74,7 +62,7 @@
             </div>
 
             <div class="hint">
-              当前页面只搭建前端界面与路由入口，保存逻辑尚未接入后端接口。
+              点击“保存标注”后会写入后端 `soh_annotation` 表（标注来源/模型版本可追溯）。
             </div>
           </el-form>
         </el-card>
@@ -84,18 +72,20 @@
         <el-card class="card" shadow="never">
           <template #header>
             <div class="card-header">
-              <span>历史标注</span>
+              <span>标注说明</span>
             </div>
           </template>
 
-          <el-empty description="暂无历史标注数据（占位）" />
+          <div class="desc">
+            该页面用于给电池台账补充 SOH 真值标签，并保留来源与模型版本，便于后续训练/评估。
+          </div>
 
           <el-divider />
 
           <div class="placeholder-steps">
-            <div class="step">1. 选择电池与标注 SOH</div>
-            <div class="step">2. 保存后写入标注表（后端待实现）</div>
-            <div class="step">3. 用于 SOH 训练/校准（后续扩展）</div>
+            <div class="step">1. 输入电池ID并获取预测（可选）</div>
+            <div class="step">2. 填写 SOH(%)、来源与模型版本</div>
+            <div class="step">3. 保存后写入 `soh_annotation`（后续可用于训练）</div>
           </div>
         </el-card>
       </el-col>
@@ -246,7 +236,7 @@ const onResetClick = () => {
 .card {
   background: #141414;
   border: 1px solid #1f1f1f;
-  flex: 1;
+  flex: 0 0 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -275,14 +265,68 @@ const onResetClick = () => {
 
 .card :deep(.el-card__body) {
   padding: 12px 16px;
+  overflow: auto;
 }
 
 .section {
-  margin-top: 16px;
+  margin-top: 4px;
 }
 
-.form-dark {
+.filter-dark {
   width: 100%;
+}
+
+/* 让输入框底色和 BatteryLedger.vue 一致（深色暗灰） */
+::deep(.filter-dark .el-form-item) {
+  margin-bottom: 10px !important;
+}
+
+::deep(.filter-dark .el-form-item__label) {
+  color: #cfd3dc;
+}
+
+::deep(.filter-dark .el-input .el-input__wrapper) {
+  background-color: #1c1c1c;
+  box-shadow: 0 0 0 1px #303030 inset;
+  color: #cfd3dc;
+}
+
+::deep(.filter-dark .el-input__inner) {
+  color: #cfd3dc;
+}
+
+::deep(.filter-dark .el-input__inner::placeholder) {
+  color: #555;
+}
+
+::deep(.filter-dark .el-input.is-focus .el-input__wrapper),
+::deep(.filter-dark .el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 1px #409eff inset;
+}
+
+::deep(.filter-dark .el-textarea__inner) {
+  background-color: #1c1c1c;
+  color: #cfd3dc;
+}
+
+::deep(.filter-dark .el-textarea__inner::placeholder) {
+  color: #555;
+}
+
+::deep(.filter-dark .el-select .el-select__wrapper) {
+  background-color: #1c1c1c;
+  box-shadow: 0 0 0 1px #303030 inset;
+  color: #cfd3dc;
+}
+
+::deep(.filter-dark .el-select .el-select__placeholder) {
+  color: #555;
+}
+
+::deep(.filter-dark .el-input-number .el-input-number__wrapper) {
+  background-color: #1c1c1c;
+  box-shadow: 0 0 0 1px #303030 inset;
+  color: #cfd3dc;
 }
 
 ::deep(.form-dark .el-form-item) {
@@ -357,6 +401,13 @@ const onResetClick = () => {
   font-size: 12px;
 }
 
+.desc {
+  color: #a0a0a0;
+  font-size: 12px;
+  line-height: 18px;
+  padding: 2px 2px 10px 2px;
+}
+
 .placeholder-steps {
   padding: 6px 2px;
 }
@@ -384,6 +435,54 @@ const onResetClick = () => {
   color: #e5e7eb;
   font-family: 'Courier New', monospace;
   font-size: 12px;
+}
+</style>
+
+<style>
+/* 额外一层全局样式：确保 SOH 标注页输入框底色与 BatteryLedger 完全一致 */
+.filter-dark .el-input__wrapper {
+  background-color: #1c1c1c !important;
+  box-shadow: 0 0 0 1px #303030 inset !important;
+  color: #cfd3dc !important;
+}
+
+.filter-dark .el-input__inner {
+  background-color: #1c1c1c !important;
+  color: #cfd3dc !important;
+}
+
+.filter-dark .el-input__inner::placeholder {
+  color: #555 !important;
+}
+
+.filter-dark .el-input.is-focus .el-input__wrapper,
+.filter-dark .el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 1px #409eff inset !important;
+}
+
+.filter-dark .el-textarea__inner {
+  background-color: #1c1c1c !important;
+  color: #cfd3dc !important;
+}
+
+.filter-dark .el-textarea__inner::placeholder {
+  color: #555 !important;
+}
+
+.filter-dark .el-select__wrapper {
+  background-color: #1c1c1c !important;
+  box-shadow: 0 0 0 1px #303030 inset !important;
+  color: #cfd3dc !important;
+}
+
+.filter-dark .el-select__placeholder {
+  color: #555 !important;
+}
+
+.filter-dark .el-input-number__wrapper {
+  background-color: #1c1c1c !important;
+  box-shadow: 0 0 0 1px #303030 inset !important;
+  color: #cfd3dc !important;
 }
 </style>
 
