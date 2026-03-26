@@ -11,11 +11,13 @@
 
           <el-form :model="form" label-width="90px" class="filter-dark" @submit.prevent>
             <el-form-item label="电池ID">
-              <el-input
+              <el-autocomplete
                 v-model="form.batteryCode"
-                placeholder="例如：batch2_b1c12"
                 clearable
-                @keyup.enter="loadPredicted"
+                :fetch-suggestions="queryBatterySuggestions"
+                value-key="value"
+                placeholder="输入电池ID关键词并选择（例如：batch2_b1c）"
+                @select="onBatterySelected"
               />
             </el-form-item>
 
@@ -83,7 +85,7 @@
           <el-divider />
 
           <div class="placeholder-steps">
-            <div class="step">1. 输入电池ID并获取预测（可选）</div>
+            <div class="step">1. 选择电池（可选：会自动获取预测）</div>
             <div class="step">2. 填写 SOH(%)、来源与模型版本</div>
             <div class="step">3. 保存后写入 `soh_annotation`（后续可用于训练）</div>
           </div>
@@ -220,6 +222,43 @@ const onResetClick = () => {
   form.modelVersion = ''
   predictedSohPercent.value = null
 }
+
+type BatteryCodeSuggestion = { value: string }
+
+let inFlightSearch: Promise<void> | null = null
+let searchSeq = 0
+
+// el-autocomplete：输入关键词后去台账搜索匹配电池ID
+async function queryBatterySuggestions(queryString: string, cb: (sugs: BatteryCodeSuggestion[]) => void) {
+  const q = (queryString || '').trim()
+  if (!q) {
+    cb([])
+    return
+  }
+
+  const seq = ++searchSeq
+  try {
+    const resp = await axios.get('/api/batteries', {
+      params: { page: 0, size: 10, batteryCode: q },
+    })
+
+    if (seq !== searchSeq) return
+
+    const content = resp.data?.content || []
+    const list = (content || [])
+      .map((r: any) => r?.batteryCode as string)
+      .filter((x: any) => typeof x === 'string' && x.trim().length > 0)
+
+    cb(list.slice(0, 10).map((x) => ({ value: x })))
+  } catch {
+    cb([])
+  }
+}
+
+async function onBatterySelected() {
+  // 选择后自动获取一次预测 SOH（并发由 inFlightPredict 锁保护）
+  await loadPredicted()
+}
 </script>
 
 <style scoped>
@@ -276,7 +315,6 @@ const onResetClick = () => {
   width: 100%;
 }
 
-/* 让输入框底色和 BatteryLedger.vue 一致（深色暗灰） */
 ::deep(.filter-dark .el-form-item) {
   margin-bottom: 10px !important;
 }
@@ -439,7 +477,6 @@ const onResetClick = () => {
 </style>
 
 <style>
-/* 额外一层全局样式：确保 SOH 标注页输入框底色与 BatteryLedger 完全一致 */
 .filter-dark .el-input__wrapper {
   background-color: #1c1c1c !important;
   box-shadow: 0 0 0 1px #303030 inset !important;
@@ -483,6 +520,30 @@ const onResetClick = () => {
   background-color: #1c1c1c !important;
   box-shadow: 0 0 0 1px #303030 inset !important;
   color: #cfd3dc !important;
+}
+
+.filter-dark .el-autocomplete__wrapper {
+  background-color: #1c1c1c !important;
+  box-shadow: 0 0 0 1px #303030 inset !important;
+  color: #cfd3dc !important;
+}
+
+.filter-dark .el-autocomplete__input {
+  background-color: #1c1c1c !important;
+  color: #cfd3dc !important;
+}
+
+.filter-dark .el-autocomplete-suggestion__wrap {
+  background-color: #141414 !important;
+  border: 1px solid #1f1f1f !important;
+}
+
+.filter-dark .el-autocomplete-suggestion__item {
+  color: #cfd3dc !important;
+}
+
+.filter-dark .el-autocomplete-suggestion__item:hover {
+  background-color: rgba(64, 158, 255, 0.12) !important;
 }
 </style>
 
