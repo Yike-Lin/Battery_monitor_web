@@ -97,7 +97,7 @@
 
 <script setup lang="ts">
 import axios from 'axios'
-import { reactive, ref } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 
 type SohLabelForm = {
@@ -140,7 +140,10 @@ async function loadPredicted() {
   }
 
   predictLoading.value = true
-  predictedSohPercent.value = predictedSohPercent.value
+  const codeAtStart = code
+  // 先清空旧显示，避免用户切换电池后看到“上一个电池的预测值”
+  predictedSohPercent.value = null
+  form.sohPercent = null
 
   inFlightPredict = (async () => {
     try {
@@ -152,23 +155,27 @@ async function loadPredicted() {
       const row = resp.data?.content?.[0]
       if (!row) {
         ElMessage.error(`未找到电池：${code}`)
-        predictedSohPercent.value = null
-        form.sohPercent = null
         return
       }
 
       if (row.sohPercent != null) {
         const v = Number(row.sohPercent)
-        predictedSohPercent.value = v
-        form.sohPercent = v
+        if ((form.batteryCode || '').trim() === codeAtStart) {
+          predictedSohPercent.value = v
+          form.sohPercent = v
+          form.source = 'predicted'
+        }
         return
       }
 
       // sohPercent 为空时：复用后端预测入口 /{id}/soh-recalculate
       const updated = await axios.post(`/api/batteries/${row.id}/soh-recalculate`)
       const soh = updated.data?.sohPercent != null ? Number(updated.data.sohPercent) : null
-      predictedSohPercent.value = soh
-      form.sohPercent = soh
+      if ((form.batteryCode || '').trim() === codeAtStart) {
+        predictedSohPercent.value = soh
+        form.sohPercent = soh
+        form.source = 'predicted'
+      }
     } catch (e: any) {
       const msg = e?.response?.data || e?.message || '获取预测失败'
       ElMessage.error(msg)
@@ -181,6 +188,18 @@ async function loadPredicted() {
 
   return inFlightPredict
 }
+
+// 当电池ID被清空/切换时，顺便把上一次的预测 SOH 重置掉，避免出现“输入框空了但 SOH 还显示上一个电池”的错位。
+watch(
+  () => form.batteryCode,
+  (nv) => {
+    const code = (nv || '').trim()
+    if (!code) {
+      predictedSohPercent.value = null
+      form.sohPercent = null
+    }
+  },
+)
 
 const onSaveClick = async () => {
   if (!form.batteryCode.trim()) {
