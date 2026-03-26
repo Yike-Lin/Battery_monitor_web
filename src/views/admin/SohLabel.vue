@@ -57,7 +57,12 @@
               >
                 获取预测 SOH
               </el-button>
-              <el-button type="primary" :disabled="saving" @click="onSaveClick">
+              <el-button
+                type="primary"
+                :loading="saving"
+                :disabled="saving || predictLoading || !form.batteryCode.trim() || form.sohPercent == null"
+                @click="onSaveClick"
+              >
                 保存标注
               </el-button>
               <el-button :disabled="saving" @click="onResetClick">重置</el-button>
@@ -74,20 +79,39 @@
         <el-card class="card" shadow="never">
           <template #header>
             <div class="card-header">
-              <span>标注说明</span>
+              <span>保存结果</span>
             </div>
           </template>
 
-          <div class="desc">
-            该页面用于给电池台账补充 SOH 真值标签，并保留来源与模型版本，便于后续训练/评估。
+          <div v-if="savedList.length" class="saved-list">
+            <div v-for="it in savedList" :key="it.id" class="save-item">
+              <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px">
+                <div class="mono">#{{ it.id }}</div>
+                <div class="muted">{{ formatCreatedAt(it.createdAt) }}</div>
+              </div>
+
+              <div class="desc" style="padding: 0; margin: 8px 0 0 0">
+                电池：<span class="mono">{{ it.batteryCode }}</span>，
+                SOH：<span class="mono">{{ it.sohPercent.toFixed(2) }}%</span>，
+                来源：<span class="mono">{{ it.source }}</span>
+              </div>
+
+              <div v-if="it.modelVersion" class="muted" style="font-size: 12px; margin-top: 4px; word-break: break-all">
+                模型：{{ it.modelVersion }}
+              </div>
+
+              <div v-if="it.predictedSohPercent != null" class="muted" style="font-size: 12px; margin-top: 4px">
+                预测：{{ it.predictedSohPercent.toFixed(2) }}%
+              </div>
+
+              <div v-if="it.note" class="desc" style="padding: 0; margin-top: 6px">
+                备注：{{ it.note }}
+              </div>
+            </div>
           </div>
 
-          <el-divider />
-
-          <div class="placeholder-steps">
-            <div class="step">1. 选择电池（可选：会自动获取预测）</div>
-            <div class="step">2. 填写 SOH(%)、来源与模型版本</div>
-            <div class="step">3. 保存后写入 `soh_annotation`（后续可用于训练）</div>
+          <div v-else class="muted" style="padding: 8px 0; font-size: 12px">
+            还没有保存记录。填写好后点击“保存标注”。
           </div>
         </el-card>
       </el-col>
@@ -97,7 +121,7 @@
 
 <script setup lang="ts">
 import axios from 'axios'
-import { reactive, ref, watch } from 'vue'
+import { onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 
 type SohLabelForm = {
@@ -121,6 +145,57 @@ const predictLoading = ref(false)
 const predictedSohPercent = ref<number | null>(null)
 
 let inFlightPredict: Promise<void> | null = null
+
+type SohSavedItem = {
+  id: number
+  batteryCode: string
+  sohPercent: number
+  source: string
+  modelVersion: string | null
+  predictedSohPercent: number | null
+  note: string | null
+  createdAt: string
+}
+
+const savedList = ref<SohSavedItem[]>([])
+const savedLoading = ref(false)
+let inFlightLoadSaved: Promise<void> | null = null
+
+function formatCreatedAt(iso: string) {
+  try {
+    const d = new Date(iso)
+    if (Number.isNaN(d.getTime())) return iso
+    return d.toLocaleString()
+  } catch {
+    return iso
+  }
+}
+
+async function loadSaved(limit = 2000) {
+  if (inFlightLoadSaved) return
+  savedLoading.value = true
+  inFlightLoadSaved = (async () => {
+    const resp = await axios.get('/api/batteries/soh-annotations', { params: { limit } })
+    const list = resp.data || []
+    savedList.value = (list || []).map((x: any) => ({
+      id: Number(x.id),
+      batteryCode: String(x.batteryCode || ''),
+      sohPercent: x.sohPercent != null ? Number(x.sohPercent) : 0,
+      source: String(x.source || ''),
+      modelVersion: x.modelVersion ?? null,
+      predictedSohPercent: x.predictedSohPercent != null ? Number(x.predictedSohPercent) : null,
+      note: x.note ?? null,
+      createdAt: x.createdAt ? String(x.createdAt) : new Date().toISOString(),
+    }))
+  })()
+
+  try {
+    await inFlightLoadSaved
+  } finally {
+    inFlightLoadSaved = null
+    savedLoading.value = false
+  }
+}
 
 type BatteryListPageResp = {
   content?: Array<{
@@ -222,9 +297,10 @@ const onSaveClick = async () => {
       note: form.note ? form.note.trim() : null,
     }
 
-    await axios.post('/api/batteries/soh-annotations', payload)
     ElMessage.success('保存标注成功')
     onResetClick()
+
+    await loadSaved()
   } catch (e: any) {
     const msg = e?.response?.data || e?.message || '保存失败'
     ElMessage.error(msg)
@@ -278,6 +354,10 @@ async function onBatterySelected() {
   // 选择后自动获取一次预测 SOH（并发由 inFlightPredict 锁保护）
   await loadPredicted()
 }
+
+onMounted(() => {
+  loadSaved()
+})
 </script>
 
 <style scoped>
@@ -473,6 +553,22 @@ async function onBatterySelected() {
   color: #a0a0a0;
   font-size: 12px;
   line-height: 24px;
+}
+
+.saved-list {
+  max-height: 560px;
+  overflow: auto;
+  padding-right: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.save-item {
+  border: 1px solid #1f1f1f;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #141414;
 }
 
 .predicted-row {
