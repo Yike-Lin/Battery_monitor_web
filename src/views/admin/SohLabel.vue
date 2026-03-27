@@ -81,30 +81,57 @@
           </template>
 
           <div v-if="savedList.length" class="saved-list">
-            <div v-for="it in savedList" :key="it.id" class="save-item">
-              <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px">
-                <div class="mono">#{{ it.id }}</div>
-                <div class="muted">{{ formatCreatedAt(it.createdAt) }}</div>
-              </div>
+            <div v-for="it in pagedSavedList" :key="it.id" class="save-item">
+              <div class="save-body">
+                <div class="save-meta">
+                  <div class="save-id mono">#{{ String(it.id).padStart(2, '0') }}</div>
+                  <div class="save-time muted">{{ formatCreatedAt(it.createdAt) }}</div>
+                </div>
 
-              <div class="desc" style="padding: 0; margin: 8px 0 0 0">
-                电池：<span class="mono">{{ it.batteryCode }}</span>，
-                SOH：<span class="mono">{{ it.sohPercent.toFixed(2) }}%</span>，
-                来源：<span class="mono">{{ it.source }}</span>
-              </div>
+                <div class="save-sep" />
 
-              <div v-if="it.modelVersion" class="muted" style="font-size: 12px; margin-top: 4px; word-break: break-all">
-                模型：{{ it.modelVersion }}
-              </div>
+                <div class="save-3col">
+                  <div class="col-cell">
+                    <div class="col-label muted">电池</div>
+                    <div class="col-value mono">{{ it.batteryCode }}</div>
+                  </div>
+                  <div class="col-cell">
+                    <div class="col-label muted">SOH</div>
+                    <div class="col-value mono accent">{{ it.sohPercent.toFixed(2) }}%</div>
+                  </div>
+                  <div class="col-cell">
+                    <div class="col-label muted">来源</div>
+                    <div class="col-value mono">{{ it.source }}</div>
+                  </div>
 
-              <div v-if="it.predictedSohPercent != null" class="muted" style="font-size: 12px; margin-top: 4px">
-                预测：{{ it.predictedSohPercent.toFixed(2) }}%
-              </div>
-
-              <div v-if="it.note" class="desc" style="padding: 0; margin-top: 6px">
-                备注：{{ it.note }}
+                  <div class="col-cell">
+                    <div class="col-label muted">模型</div>
+                    <div class="col-value mono">{{ it.modelVersion || '—' }}</div>
+                  </div>
+                  <div class="col-cell">
+                    <div class="col-label muted">预测</div>
+                    <div class="col-value mono accent">
+                      {{ it.predictedSohPercent != null ? it.predictedSohPercent.toFixed(2) + '%' : '—' }}
+                    </div>
+                  </div>
+                  <div class="col-cell">
+                    <div class="col-label muted">备注</div>
+                    <div class="col-value mono">{{ it.note || '—' }}</div>
+                  </div>
+                </div>
               </div>
             </div>
+          </div>
+
+          <div v-if="savedList.length" class="pager-wrap">
+            <el-pagination
+              background
+              layout="prev, pager, next"
+              :page-size="PAGE_SIZE"
+              :total="savedList.length"
+              :current-page="currentPage"
+              @current-change="onPageChange"
+            />
           </div>
 
           <div v-else class="muted" style="padding: 8px 0; font-size: 12px">
@@ -118,7 +145,7 @@
 
 <script setup lang="ts">
 import axios from 'axios'
-import { onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 
 type SohLabelForm = {
@@ -156,8 +183,18 @@ type SohSavedItem = {
 }
 
 const savedList = ref<SohSavedItem[]>([])
-const savedLoading = ref(false)
 let inFlightLoadSaved: Promise<void> | null = null
+const PAGE_SIZE = 10
+const currentPage = ref(1)
+
+const pagedSavedList = computed(() => {
+  const start = (currentPage.value - 1) * PAGE_SIZE
+  return savedList.value.slice(start, start + PAGE_SIZE)
+})
+
+function onPageChange(page: number) {
+  currentPage.value = page
+}
 
 function formatCreatedAt(iso: string) {
   try {
@@ -169,10 +206,16 @@ function formatCreatedAt(iso: string) {
   }
 }
 
+function calcPageForItemId(itemId: number | null | undefined) {
+  if (itemId == null) return null
+  const idx = savedList.value.findIndex((x) => x.id === Number(itemId))
+  if (idx < 0) return null
+  return Math.floor(idx / PAGE_SIZE) + 1
+}
+
 // 拉取 SOH 标注记录（添加顺序：createdAt 升序）
-async function loadSaved(limit = 2000) {
+async function loadSaved(limit = 2000, focusId?: number | null) {
   if (inFlightLoadSaved) return
-  savedLoading.value = true
   inFlightLoadSaved = (async () => {
     const resp = await axios.get('/api/batteries/soh-annotations', { params: { limit } })
     const list = resp.data || []
@@ -186,13 +229,21 @@ async function loadSaved(limit = 2000) {
       note: x.note ?? null,
       createdAt: x.createdAt ? String(x.createdAt) : new Date().toISOString(),
     }))
+
+    // 有 focusId 时，立即跳转到该记录所在页；否则保持当前页（超界时夹到最后一页）
+    const pages = Math.max(1, Math.ceil(savedList.value.length / PAGE_SIZE))
+    const focusedPage = calcPageForItemId(focusId)
+    if (focusedPage != null) {
+      currentPage.value = focusedPage
+    } else {
+      currentPage.value = Math.min(Math.max(currentPage.value, 1), pages)
+    }
   })()
 
   try {
     await inFlightLoadSaved
   } finally {
     inFlightLoadSaved = null
-    savedLoading.value = false
   }
 }
 
@@ -300,7 +351,7 @@ const onSaveClick = async () => {
     ElMessage.success('保存标注成功' + (resp.data != null ? `（id=${resp.data}）` : ''))
     onResetClick()
 
-    await loadSaved()
+    await loadSaved(2000, Number(resp.data))
   } catch (e: any) {
     const msg = e?.response?.data || e?.message || '保存失败'
     ElMessage.error(msg)
@@ -320,7 +371,6 @@ const onResetClick = () => {
 
 type BatteryCodeSuggestion = { value: string }
 
-let inFlightSearch: Promise<void> | null = null
 let searchSeq = 0
 
 // el-autocomplete：输入关键词后去台账搜索匹配电池ID
@@ -381,16 +431,17 @@ onMounted(() => {
   overflow: hidden;
 }
 
-.compact-header :deep(.el-card__body) {
-  padding: 16px 18px;
-}
-
 .card-header {
   display: flex;
   align-items: center;
   gap: 10px;
   font-weight: 600;
   color: #e5e7eb;
+}
+
+/* 去掉“标注对象/保存结果”下方的默认细分割线 */
+.card :deep(.el-card__header) {
+  border-bottom: none !important;
 }
 
 ::deep(.el-card__body) {
@@ -466,65 +517,6 @@ onMounted(() => {
   color: #cfd3dc;
 }
 
-::deep(.form-dark .el-form-item) {
-  margin-bottom: 10px !important;
-}
-
-::deep(.form-dark .el-form-item__label) {
-  color: #cfd3dc;
-}
-
-::deep(.form-dark .el-input .el-input__wrapper),
-::deep(.form-dark .el-textarea .el-textarea__inner),
-::deep(.form-dark .el-input-number .el-input-number__decrease),
-::deep(.form-dark .el-input-number .el-input-number__increase) {
-  background-color: #1c1c1c;
-  box-shadow: 0 0 0 1px #303030 inset;
-  color: #cfd3dc;
-}
-
-::deep(.form-dark .el-input__inner::placeholder),
-::deep(.form-dark .el-textarea__inner::placeholder) {
-  color: #555;
-}
-
-::deep(.form-dark .el-input.is-focus .el-input__wrapper),
-::deep(.form-dark .el-input__wrapper.is-focus) {
-  box-shadow: 0 0 0 1px #409eff inset;
-}
-
-::deep(.form-dark .el-textarea__inner) {
-  background-color: #1c1c1c;
-  color: #cfd3dc;
-}
-
-.head {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.head-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.title {
-  font-size: 18px;
-  font-weight: 800;
-  color: #e5e7eb;
-}
-
-.tag {
-  margin-top: 2px;
-}
-
-.head-sub {
-  color: #a0a0a0;
-  font-size: 13px;
-}
-
 .form-actions {
   display: flex;
   gap: 10px;
@@ -533,37 +525,140 @@ onMounted(() => {
 }
 
 
-.desc {
-  color: #a0a0a0;
-  font-size: 12px;
-  line-height: 18px;
-  padding: 2px 2px 10px 2px;
-}
-
-.placeholder-steps {
-  padding: 6px 2px;
-}
-
-.step {
-  color: #a0a0a0;
-  font-size: 12px;
-  line-height: 24px;
-}
-
 .saved-list {
   max-height: 560px;
   overflow: auto;
   padding-right: 4px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+  scrollbar-color: #3a3a3a transparent; /* Firefox */
+  scrollbar-width: thin;
+}
+
+.pager-wrap {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.saved-list::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.saved-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.saved-list::-webkit-scrollbar-thumb {
+  background-color: #3a3a3a;
+  border-radius: 4px;
+}
+
+.saved-list::-webkit-scrollbar-thumb:hover {
+  background-color: #555;
 }
 
 .save-item {
   border: 1px solid #1f1f1f;
   border-radius: 10px;
-  padding: 10px 12px;
+  padding: 9px 12px;
   background: #141414;
+}
+
+.save-body {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+
+.save-meta {
+  width: 220px;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.save-id {
+  font-size: 14px;
+  line-height: 20px;
+  margin-top: 0;
+  color: #e5e7eb;
+}
+
+.save-id.mono {
+  font-size: 18px !important;
+  line-height: 20px !important;
+  font-family: 'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', Arial, sans-serif !important;
+}
+
+.save-time {
+  font-size: 16px;
+  line-height: 22px;
+  margin-top: 6px;
+  white-space: nowrap;
+}
+
+.save-time.muted {
+  font-size: 18px !important;
+  line-height: 22px !important;
+  margin-top: 6px !important;
+  font-family: 'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', Arial, sans-serif !important;
+}
+
+.save-sep {
+  width: 1px;
+  background: #2a2a2a;
+  margin: 0;
+  flex: 0 0 auto;
+  align-self: stretch;
+}
+
+.save-3col {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  column-gap: 18px;
+  row-gap: 6px;
+  align-items: start;
+}
+
+.col-cell {
+  min-width: 0;
+}
+
+.col-label {
+  font-size: 18px !important;
+  line-height: 22px !important;
+  margin-bottom: 2px;
+  color: #8f99a8;
+  font-family: 'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', Arial, sans-serif !important;
+}
+
+.col-value {
+  font-size: 18px !important;
+  line-height: 22px !important;
+  word-break: break-all;
+  color: #ffffff;
+  font-family: 'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', Arial, sans-serif !important;
+}
+
+.accent {
+  color: #38d0bd !important;
+}
+
+.save-item .muted {
+  color: #8f99a8;
+  font-size: 18px !important;
+  font-family: 'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', Arial, sans-serif !important;
+}
+
+.save-item .mono {
+  font-size: 18px !important;
+  color: #ffffff;
+  font-family: 'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', Arial, sans-serif !important;
 }
 
 .predicted-row {
@@ -654,6 +749,25 @@ onMounted(() => {
 
 .filter-dark .el-autocomplete-suggestion__item:hover {
   background-color: rgba(64, 158, 255, 0.12) !important;
+}
+
+/* 参考单体电池详情：让下拉建议滚动条颜色与深色背景一致 */
+.filter-dark .el-autocomplete-suggestion__wrap::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.filter-dark .el-autocomplete-suggestion__wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.filter-dark .el-autocomplete-suggestion__wrap::-webkit-scrollbar-thumb {
+  background-color: #333;
+  border-radius: 4px;
+}
+
+.filter-dark .el-autocomplete-suggestion__wrap::-webkit-scrollbar-thumb:hover {
+  background-color: #555;
 }
 </style>
 
