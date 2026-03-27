@@ -751,7 +751,6 @@ onMounted(() => {
   background-color: rgba(64, 158, 255, 0.12) !important;
 }
 
-/* 参考单体电池详情：让下拉建议滚动条颜色与深色背景一致 */
 .filter-dark .el-autocomplete-suggestion__wrap::-webkit-scrollbar {
   width: 8px;
   height: 8px;
