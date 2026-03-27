@@ -42,10 +42,14 @@
       <el-header class="layout-header">
         <div class="header-left">
           <el-breadcrumb separator="/">
-            <el-breadcrumb-item><span class="breadcrumb-text">首页</span></el-breadcrumb-item>
-            <el-breadcrumb-item><span class="breadcrumb-text">电池管理</span></el-breadcrumb-item>
-            <el-breadcrumb-item>
-              <span class="breadcrumb-text active">{{ pageTitle }}</span>
+            <el-breadcrumb-item
+              v-for="(item, idx) in breadcrumbItems"
+              :key="`${item.label}-${idx}`"
+              :to="item.to"
+            >
+              <span class="breadcrumb-text" :class="{ active: idx === breadcrumbItems.length - 1 }">
+                {{ item.label }}
+              </span>
             </el-breadcrumb-item>
           </el-breadcrumb>
         </div>
@@ -74,8 +78,23 @@ const route = useRoute()
 // 当前路由自动高亮
 const activeMenu = computed(() => route.path)
 
-// 面包屑/标题
-const pageTitle = computed(() => (route.meta?.title as string) || '页面')
+type Crumb = { label: string; to?: string }
+
+// 动态面包屑：首页 / 分组 / 当前页
+const breadcrumbItems = computed<Crumb[]>(() => {
+  const items: Crumb[] = [{ label: '首页', to: '/dashboard' }]
+
+  const group = (route.meta?.group as string) || ''
+  if (group) {
+    const groupLabel = group === '资产管理' ? '电池管理' : group
+    items.push({ label: groupLabel, to: '/admin/battery-ledger' })
+  }
+
+  const title = (route.meta?.title as string) || '页面'
+  items.push({ label: title })
+
+  return items
+})
 
 const demoPackId = 'P0001'
 </script>
