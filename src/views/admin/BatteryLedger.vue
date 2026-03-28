@@ -145,7 +145,7 @@
 import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage , ElMessageBox } from 'element-plus'
-import axios from 'axios'
+import axios, { isAxiosError } from 'axios'
 import BatteryFormDialog, { type BatteryForm } from '@/components/admin/BatteryFormDialog.vue'
 import { View, Edit, Delete } from '@element-plus/icons-vue'
 
@@ -227,9 +227,19 @@ function formatLastRecordAtForDisplay(v: string | null): string {
   return v
 }
 
+type BatteryListQueryParams = {
+  page: number
+  size: number
+  batteryCode?: string
+  modelCode?: string
+  status?: number
+  commissioningDateStart?: string
+  commissioningDateEnd?: string
+}
+
 // 列表查询
 async function doQuery() {
-  const params: any = {
+  const params: BatteryListQueryParams = {
     page: page.value - 1,
     size: pageSize.value,
   }
@@ -354,9 +364,10 @@ const payload = {
     ElMessage.success('已保存')
     dialogVisible.value = false
     doQuery()
-  } catch (error: any) {
-    if (error.response) {
-      const msg = error.response.data || '保存失败'
+  } catch (error: unknown) {
+    if (isAxiosError(error) && error.response) {
+      const d = error.response.data
+      const msg = d == null ? '保存失败' : typeof d === 'string' ? d : String(d)
       ElMessage.error(msg)
     } else {
       ElMessage.error('网络异常或服务器错误')
