@@ -144,7 +144,7 @@
 </template>
 
 <script setup lang="ts">
-import axios from 'axios'
+import axios, { isAxiosError } from 'axios'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 
@@ -213,22 +213,35 @@ function calcPageForItemId(itemId: number | null | undefined) {
   return Math.floor(idx / PAGE_SIZE) + 1
 }
 
+function messageFromUnknown(err: unknown, fallback: string): string {
+  if (isAxiosError(err)) {
+    const d = err.response?.data
+    if (typeof d === 'string' && d.trim()) return d
+    if (d != null) return String(d)
+    return err.message || fallback
+  }
+  return err instanceof Error ? err.message : fallback
+}
+
 // 拉取 SOH 标注记录（添加顺序：createdAt 升序）
 async function loadSaved(limit = 2000, focusId?: number | null) {
   if (inFlightLoadSaved) return
   inFlightLoadSaved = (async () => {
     const resp = await axios.get('/api/batteries/soh-annotations', { params: { limit } })
-    const list = resp.data || []
-    savedList.value = (list || []).map((x: any) => ({
-      id: Number(x.id),
-      batteryCode: String(x.batteryCode || ''),
-      sohPercent: x.sohPercent != null ? Number(x.sohPercent) : 0,
-      source: String(x.source || ''),
-      modelVersion: x.modelVersion ?? null,
-      predictedSohPercent: x.predictedSohPercent != null ? Number(x.predictedSohPercent) : null,
-      note: x.note ?? null,
-      createdAt: x.createdAt ? String(x.createdAt) : new Date().toISOString(),
-    }))
+    const raw = resp.data
+    const list = Array.isArray(raw) ? raw : []
+    savedList.value = (list as Record<string, unknown>[]).map(
+      (x): SohSavedItem => ({
+        id: Number(x.id),
+        batteryCode: String(x.batteryCode ?? ''),
+        sohPercent: x.sohPercent != null ? Number(x.sohPercent) : 0,
+        source: String(x.source ?? ''),
+        modelVersion: x.modelVersion != null ? String(x.modelVersion) : null,
+        predictedSohPercent: x.predictedSohPercent != null ? Number(x.predictedSohPercent) : null,
+        note: x.note != null ? String(x.note) : null,
+        createdAt: x.createdAt != null ? String(x.createdAt) : new Date().toISOString(),
+      }),
+    )
 
     // 有 focusId 时，立即跳转到该记录所在页；否则保持当前页（超界时夹到最后一页）
     const pages = Math.max(1, Math.ceil(savedList.value.length / PAGE_SIZE))
@@ -301,9 +314,8 @@ async function loadPredicted() {
         form.sohPercent = soh
         form.source = 'predicted'
       }
-    } catch (e: any) {
-      const msg = e?.response?.data || e?.message || '获取预测失败'
-      ElMessage.error(msg)
+    } catch (e: unknown) {
+      ElMessage.error(messageFromUnknown(e, '获取预测失败'))
     }
   })()
     .finally(() => {
@@ -352,9 +364,8 @@ const onSaveClick = async () => {
     onResetClick()
 
     await loadSaved(2000, Number(resp.data))
-  } catch (e: any) {
-    const msg = e?.response?.data || e?.message || '保存失败'
-    ElMessage.error(msg)
+  } catch (e: unknown) {
+    ElMessage.error(messageFromUnknown(e, '保存失败'))
   } finally {
     saving.value = false
   }
@@ -383,18 +394,18 @@ async function queryBatterySuggestions(queryString: string, cb: (sugs: BatteryCo
 
   const seq = ++searchSeq
   try {
-    const resp = await axios.get('/api/batteries', {
+    const resp = await axios.get<{ content?: Array<Record<string, unknown>> }>('/api/batteries', {
       params: { page: 0, size: 10, batteryCode: q },
     })
 
     if (seq !== searchSeq) return
 
-    const content = resp.data?.content || []
-    const list = (content || [])
-      .map((r: any) => r?.batteryCode as string)
-      .filter((x: any) => typeof x === 'string' && x.trim().length > 0)
+    const content = resp.data?.content ?? []
+    const list = content
+      .map((r) => r.batteryCode)
+      .filter((v): v is string => typeof v === 'string' && v.trim().length > 0)
 
-    cb(list.slice(0, 10).map((x) => ({ value: x })))
+    cb(list.slice(0, 10).map((x: string) => ({ value: x })))
   } catch {
     cb([])
   }
