@@ -109,14 +109,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import axios from 'axios'
+import axios, { isAxiosError } from 'axios'
+import type { TableColumnCtx } from 'element-plus'
 
 import CycleAnalysisCard from '@/components/admin/CycleAnalysisCard.vue'
 import LifecycleCapacityCard from '@/components/admin/LifecycleCapacityCard.vue'
-
-type Status = 1 | 2 | 3
 
 type BatteryListItemDto = {
   id: number
@@ -181,29 +180,28 @@ const records = ref<BatteryRecordDto[]>([])
 const sohError = ref<SohErrorDto | null>(null)
 
 // 保留三位小数的格式化函数
-const formatDecimal = (row: any, column: any, cellValue: any) => {
+const formatDecimal = (
+  _row: BatteryRecordDto,
+  _column: TableColumnCtx<BatteryRecordDto>,
+  cellValue: unknown,
+) => {
   if (cellValue === null || cellValue === undefined) return '-' // 处理空值
   const num = Number(cellValue)
-  return Number.isNaN(num) ? cellValue : num.toFixed(3)
+  return Number.isNaN(num) ? String(cellValue) : num.toFixed(3)
 }
-
-const packMetaText = computed(() => {
-  const b = battery.value
-  if (!b) return '用于查看单体电池台账信息与采样记录'
-  return `编号：${b.batteryCode ?? '—'} · 型号：${b.modelCode ?? '—'} · 客户：${b.customerName ?? '—'}`
-})
 
 const lifecyclePoints = ref<{ cycle: number; capacityAh: number | null }[]>([])
 
-function statusText(s?: Status | null) {
-  if (!s) return '—'
+function statusText(s?: number | null) {
+  if (s == null) return '—'
   if (s === 1) return '在役'
   if (s === 2) return '维护'
-  return '退役'
+  if (s === 3) return '退役'
+  return '—'
 }
 
-function statusTagType(s?: Status | null) {
-  if (!s) return 'info'
+function statusTagType(s?: number | null): 'success' | 'warning' | 'info' {
+  if (s == null) return 'info'
   if (s === 1) return 'success'
   if (s === 2) return 'warning'
   return 'info'
@@ -214,7 +212,7 @@ async function loadBatteryDetail() {
   errorMsg.value = null
   
   try {
-    let targetId = route.params.batteryId ? Number(route.params.batteryId) : null
+    const targetId = route.params.batteryId ? Number(route.params.batteryId) : null
     let resp
     if (targetId) {
       resp = await axios.get<BatteryDetailDto>(`/api/batteries/${targetId}`)
@@ -243,12 +241,15 @@ async function loadBatteryDetail() {
     // 返回 ID 给 onMounted 用
     return currentId.value
 
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error('加载电池详情失败', e)
-    if (e.response && e.response.status === 404) {
-         errorMsg.value = '暂无电池数据，请先入库'
+    if (isAxiosError(e) && e.response?.status === 404) {
+      errorMsg.value = '暂无电池数据，请先入库'
+    } else if (isAxiosError(e)) {
+      const data = e.response?.data as { message?: string } | undefined
+      errorMsg.value = data?.message || '加载电池详情失败'
     } else {
-         errorMsg.value = e?.response?.data?.message || '加载电池详情失败'
+      errorMsg.value = '加载电池详情失败'
     }
     return null
   } finally {
@@ -271,7 +272,7 @@ async function loadRecordsByCycle(cycle: number) {
       params: { cycle },
     })
     records.value = resp.data || []
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error('加载记录失败', e)
     records.value = []
   } finally {
@@ -285,7 +286,7 @@ async function loadSohError() {
   try {
     const resp = await axios.get<SohErrorDto>(`/api/batteries/${id}/soh-error`)
     sohError.value = resp.data || null
-  } catch (e: any) {
+  } catch {
     sohError.value = null
   }
 }
@@ -313,7 +314,7 @@ async function loadLifecycleTrend() {
       `/api/batteries/${id}/records/lifecycle-capacity`,
     )
     lifecyclePoints.value = resp.data || []
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error('加载生命周期容量趋势失败', e)
     lifecyclePoints.value = []
   }
