@@ -24,12 +24,15 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, shallowRef, nextTick } from 'vue'
 import * as echarts from 'echarts'
+import type { TooltipComponentFormatterCallbackParams, DefaultLabelFormatterCallbackParams } from 'echarts'
+
+type AxisTooltipParam = DefaultLabelFormatterCallbackParams & { axisValue?: string | number }
 import axios from 'axios'
 
 const chartRef = ref<HTMLElement | null>(null)
 const batteryInfoRef = ref<HTMLDivElement | null>(null)
 const myChart = shallowRef<echarts.ECharts | null>(null)
-let timer: any = null
+let timer: ReturnType<typeof setInterval> | null = null
 let resizeObserver: ResizeObserver | null = null
 
 // 配置参数
@@ -55,12 +58,6 @@ const fetchRealData = async () => {
     // 出错时返回个空数据防炸裂
     return { time: new Date().toLocaleTimeString(), va: 0, ca: 0, vb: 0, cb: 0, cellIdA: '', cellIdB: '' }
   }
-}
-
-function formatTimeLabel(timeStr: string | undefined) {
-  // 不再使用后端 time（秒级），改用相对时间显示
-  void timeStr
-  return ''
 }
 
 // 相对时间显示：首个推进队列时记录起点，后续显示 +X.Ys
@@ -148,11 +145,12 @@ const initChart = () => {
       textStyle: { color: '#eee', fontSize: 12 },
       axisPointer: { type: 'cross', label: { backgroundColor: '#6a7985' } },
       // formatter 会在鼠标移动时频繁触发，保持轻量
-      formatter: (params: any) => {
-        const p0 = params?.[0]
-        const p1 = params?.[1]
-        const p2 = params?.[2]
-        const p3 = params?.[3]
+      formatter: (params: TooltipComponentFormatterCallbackParams) => {
+        const list = (Array.isArray(params) ? params : [params]) as AxisTooltipParam[]
+        const p0 = list[0]
+        const p1 = list[1]
+        const p2 = list[2]
+        const p3 = list[3]
 
         const t = p0?.axisValue ?? ''
         const av = p0?.value ?? 0
