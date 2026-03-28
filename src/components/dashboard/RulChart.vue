@@ -8,21 +8,23 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, nextTick, watch, defineProps } from 'vue'
+import { onMounted, nextTick, watch } from 'vue'
 import * as echarts from 'echarts'
+import type { EChartsOption } from 'echarts'
 import { useEchart } from '@/composables/useEchart'
+import type { BatteryRow } from '@/composables/useBatteryRows'
 
-const props = defineProps({
-  batteryData: {
-    type: Array,
-    default: () => []
-  }
-})
+const props = withDefaults(
+  defineProps<{
+    batteryData?: BatteryRow[]
+  }>(),
+  { batteryData: () => [] },
+)
 
 const { chartRef, setOption } = useEchart()
 
 // 1. 数据处理：将 RUL 分桶统计
-const processData = (list: any[]) => {
+const processData = (list: BatteryRow[]) => {
   if (!list || list.length === 0) {
     return {
       categories: ['<50次', '50-200', '200-500', '>500次'],
@@ -56,7 +58,7 @@ const processData = (list: any[]) => {
 const updateChart = () => {
   const { categories, values } = processData(props.batteryData)
 
-  const option = {
+  const option: EChartsOption = {
     tooltip: {
       trigger: 'axis',
       backgroundColor: 'rgba(30,30,30,0.9)',

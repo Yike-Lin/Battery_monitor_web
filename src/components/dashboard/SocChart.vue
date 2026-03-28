@@ -9,6 +9,7 @@
 
 <script setup lang="ts">
 import { onMounted, watch } from 'vue'
+import type { EChartsOption } from 'echarts'
 import { useEchart } from '@/composables/useEchart'
 import type { BatteryRow } from '@/composables/useBatteryRows'
 
@@ -45,7 +46,7 @@ const processData = (list: BatteryRow[]) => {
 
 const updateChart = () => {
   const validRows = (props.batteryData || []).filter(row => row?.soc != null)
-  const option = {
+  const option: EChartsOption = {
     tooltip: {
       trigger: 'item',
       backgroundColor: 'rgba(30,30,30,0.9)',

@@ -8,16 +8,18 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, nextTick, watch, defineProps } from 'vue'
+import { onMounted, nextTick, watch } from 'vue'
 import * as echarts from 'echarts'
+import type { EChartsOption } from 'echarts'
 import { useEchart } from '@/composables/useEchart'
+import type { BatteryRow } from '@/composables/useBatteryRows'
 
-const props = defineProps({
-  batteryData: {
-    type: Array,
-    default: () => []
-  }
-})
+const props = withDefaults(
+  defineProps<{
+    batteryData?: BatteryRow[]
+  }>(),
+  { batteryData: () => [] },
+)
 
 const { chartRef, setOption } = useEchart()
 
@@ -31,7 +33,7 @@ const THRESHOLDS = {
 }
 
 // 1. 数据处理逻辑
-const processData = (list: any[]) => {
+const processData = (list: BatteryRow[]) => {
   const categories = ['通信中断', '容量过低', '电压异常', '温度过高']
   if (!list || list.length === 0) return { categories, values: [0, 0, 0, 0] }
 
@@ -42,7 +44,7 @@ const processData = (list: any[]) => {
 
   const now = Date.now()
 
-  list.forEach((item: any) => {
+  list.forEach((item) => {
     // 通信中断：用 lastRecordAt 推断离线
     const ts = item?.lastRecordAt ? Date.parse(item.lastRecordAt) : NaN
     if (Number.isNaN(ts) || now - ts > ACTIVE_WINDOW_MS) commCount += 1
@@ -68,7 +70,7 @@ const processData = (list: any[]) => {
 const updateChart = () => {
   const { categories, values } = processData(props.batteryData)
 
-  const option = {
+  const option: EChartsOption = {
     // 提示框
     tooltip: {
       trigger: 'axis',

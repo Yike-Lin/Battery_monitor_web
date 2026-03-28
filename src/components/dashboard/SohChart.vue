@@ -9,6 +9,7 @@
 
 <script setup lang="ts">
 import { onMounted, watch } from 'vue'
+import type { EChartsOption } from 'echarts'
 import { useEchart } from '@/composables/useEchart'
 import type { BatteryRow } from '@/composables/useBatteryRows'
 
@@ -22,7 +23,7 @@ const colors = {
   poor: '#f56c6c'
 }
 
-const processData = (list: any[]) => {
+const processData = (list: BatteryRow[]) => {
   if (!list || list.length === 0) {
     return []
   }
@@ -51,7 +52,7 @@ const updateChart = () => {
     { value: 1, name: '暂无数据', itemStyle: { color: '#555' } }
   ]
 
-  const option = {
+  const option: EChartsOption = {
     tooltip: {
       trigger: 'item',
       backgroundColor: 'rgba(30,30,30,0.9)',
