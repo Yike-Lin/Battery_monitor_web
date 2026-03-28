@@ -12,6 +12,9 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, nextTick, watch } from 'vue'
 import * as echarts from 'echarts'
+import type { DefaultLabelFormatterCallbackParams } from 'echarts'
+
+type AxisTooltipParam = DefaultLabelFormatterCallbackParams & { axisValue?: string | number }
 
 const props = defineProps<{
   points: { cycle: number; capacityAh: number | null }[]
@@ -22,7 +25,7 @@ let chartInstance: echarts.ECharts | null = null
 
 const initChart = () => {
   if (!chartRef.value) return
-  chartInstance = echarts.init(chartRef.value, 'dark', { backgroundColor: 'transparent' })
+  chartInstance = echarts.init(chartRef.value, 'dark')
   updateChart()
   window.addEventListener('resize', resizeChart)
 }
@@ -62,9 +65,10 @@ const updateChart = () => {
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'line' },
-      formatter: (params: any) => {
-        if (!params || !params.length) return ''
-        const p = params[0]
+      formatter: (params: DefaultLabelFormatterCallbackParams | DefaultLabelFormatterCallbackParams[]) => {
+        const rows = (Array.isArray(params) ? params : params ? [params] : []) as AxisTooltipParam[]
+        if (!rows.length) return ''
+        const p = rows[0]!
         const cycle = p.axisValue
         const valNum = Number(p.data)
         const val = Number.isNaN(valNum) ? '-' : valNum.toFixed(3)
@@ -83,7 +87,7 @@ const updateChart = () => {
       axisLabel: {
         formatter: (value: string | number) => {
           const num = Number(value)
-          return Number.isNaN(num) ? value : num.toFixed(0)
+          return Number.isNaN(num) ? String(value) : num.toFixed(0)
         },
       },
     },

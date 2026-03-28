@@ -189,7 +189,7 @@ function onClosed() {
 }
 
 // 上传 CSV → 调用 /api/battery-csv/upload
-async function handleCsvUpload(option: any) {
+async function handleCsvUpload(option: { file: File; onSuccess?: (data: unknown, file: File) => void; onError?: (err: unknown) => void }) {
   const file: File = option.file
   csvFileName.value = file.name
 
@@ -237,11 +237,11 @@ async function handleCsvUpload(option: any) {
     // if (draft.ratedCapacityAh != null) form.ratedCapacityAh = draft.ratedCapacityAh
 
     ElMessage.success('CSV 解析成功，已绑定预测数据')
-    option.onSuccess && option.onSuccess(resp.data, file)
+    option.onSuccess?.(resp.data, file)
   } catch (e) {
     console.error('CSV 上传异常:', e)
     ElMessage.error('CSV 解析失败')
-    option.onError && option.onError(e)
+    option.onError?.(e)
   }
 }
 

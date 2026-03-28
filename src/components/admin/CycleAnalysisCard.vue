@@ -31,11 +31,22 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch, nextTick } from 'vue'
 import * as echarts from 'echarts'
+import type { DefaultLabelFormatterCallbackParams, EChartsOption } from 'echarts'
+
+/** 轴类 tooltip 里 ECharts 运行时会给 axisValue，类型定义未写出 */
+type AxisTooltipParam = DefaultLabelFormatterCallbackParams & { axisValue?: string | number }
+
+export type CycleAnalysisRecord = {
+  timeMin: number
+  voltage: number
+  current: number
+  temp?: number
+}
 
 const props = defineProps<{
   modelValue: number
   cycleMax: number
-  records: any[]
+  records: CycleAnalysisRecord[]
 }>()
 
 const cycleMax = computed(() => props.cycleMax)
@@ -105,21 +116,22 @@ const updateChart = () => {
   const voltages = data.map(item => item.voltage)
   const currents = data.map(item => item.current)
 
-  const option = {
+  const option: EChartsOption = {
     backgroundColor: 'transparent',
     tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'cross'},
-        formatter: (params: any) => {
-        if (!params || !params.length) return ''
-        const first = params[0]
+        formatter: (params: DefaultLabelFormatterCallbackParams | DefaultLabelFormatterCallbackParams[]) => {
+        const rows = (Array.isArray(params) ? params : params ? [params] : []) as AxisTooltipParam[]
+        if (!rows.length) return ''
+        const first = rows[0]!
         const xRaw = Number(first.axisValue)
-        const x = isNaN(xRaw) ? first.axisValue : xRaw.toFixed(0)
+        const x = isNaN(xRaw) ? String(first.axisValue ?? '') : xRaw.toFixed(0)
 
         let html = `Time: ${x} min<br/>`
-        params.forEach((p: any) => {
+        rows.forEach((p) => {
             const valNum = Number(p.data)
-            const val = isNaN(valNum) ? p.data : valNum.toFixed(3)
+            const val = isNaN(valNum) ? String(p.data ?? '') : valNum.toFixed(3)
             html += `${p.marker}${p.seriesName}: ${val}<br/>`
         })
         return html
@@ -166,7 +178,7 @@ const updateChart = () => {
       { name: '电压 (V)', type: 'line', yAxisIndex: 0, showSymbol: false, smooth: true, itemStyle: { color: '#409eff' }, data: voltages },
       { name: '电流 (A)', type: 'line', yAxisIndex: 1, showSymbol: false, smooth: true, itemStyle: { color: '#67c23a' }, data: currents }
     ]
-  } as any
+  }
   chartInstance.setOption(option, true)
 }
 
