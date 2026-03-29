@@ -1,22 +1,25 @@
 <template>
-  <div class="dashboard-container">
-    <KpiRow :kpi-list="kpiList" />
-    <el-row :gutter="16" class="middle-row" style="flex:1;">
-      <el-col :span="6" class="side-col">
+  <!-- dashboard-enter：进入大屏时一次性 CSS 动画，无轮询、无 JS 逐帧 -->
+  <div class="dashboard-container dashboard-enter">
+    <div class="dash-section dash-kpi">
+      <KpiRow :kpi-list="kpiList" />
+    </div>
+    <el-row :gutter="16" class="middle-row" style="flex: 1">
+      <el-col :span="6" class="side-col dash-side">
         <SohChart class="small-card" :battery-data="batteryRows" />
         <RishChart class="small-card" :battery-data="batteryRows" />
       </el-col>
 
-      <el-col :span="12" class="center-col">
+      <el-col :span="12" class="center-col dash-center">
         <CentralMonitor class="full-height-card" />
       </el-col>
 
-      <el-col :span="6" class="side-col">
+      <el-col :span="6" class="side-col dash-side">
         <SocChart class="small-card" :battery-data="batteryRows" />
         <RulChart class="small-card" :battery-data="batteryRows" />
       </el-col>
     </el-row>
-    <el-row :gutter="16" class="bottom-row-container">
+    <el-row :gutter="16" class="bottom-row-container dash-bottom">
       <el-col :span="6" class="bottom-left">
         <ICAnalysis />
       </el-col>
@@ -277,5 +280,60 @@ onUnmounted(() => {
 .bottom-row-container {
   height: 250px;
   flex-shrink: 0;
+}
+
+/* —— 进入大屏：先中间双通道淡入，周围再慢慢淡入（无位移，仅 opacity） —— */
+.dash-section {
+  min-height: 0;
+}
+
+/* 中间双通道：优先淡入；略长时长 + 柔和缓动，避免「一下亮起来」的生硬感 */
+.dashboard-enter .dash-center {
+  animation: dash-center-fade-in 0.65s cubic-bezier(0.4, 0, 0.2, 1) 0s both;
+}
+
+/* 周围区域：较晚起步 + 较长时长，形成「慢慢淡入」 */
+.dashboard-enter .dash-kpi {
+  animation: dash-surround-fade-in 0.88s ease-out 0.22s both;
+}
+
+.dashboard-enter .dash-side {
+  animation: dash-surround-fade-in 0.88s ease-out 0.3s both;
+}
+
+.dashboard-enter .dash-bottom {
+  animation: dash-surround-fade-in 0.88s ease-out 0.38s both;
+}
+
+/* 中间区：前几帧略慢抬升透明度，后半段再匀一点，观感更柔 */
+@keyframes dash-center-fade-in {
+  0% {
+    opacity: 0;
+  }
+  22% {
+    opacity: 0.35;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes dash-surround-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-enter .dash-center,
+  .dashboard-enter .dash-kpi,
+  .dashboard-enter .dash-side,
+  .dashboard-enter .dash-bottom {
+    animation: none;
+    opacity: 1;
+  }
 }
 </style>

@@ -62,7 +62,13 @@
       </el-header>
 
       <el-main class="layout-main">
-        <router-view />
+        <div class="admin-page-host">
+          <router-view v-slot="{ Component }">
+            <Transition name="admin-page" mode="out-in">
+              <component :is="Component" :key="route.fullPath" />
+            </Transition>
+          </router-view>
+        </div>
       </el-main>
     </el-container>
   </el-container>
@@ -184,5 +190,46 @@ const demoPackId = 'P0001'
   padding: 20px;
   overflow: hidden;
   box-sizing: border-box;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* 子页面切换动画：仅短时 opacity + translate，out-in 避免两页同屏叠化加重绘制 */
+.admin-page-host {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-page-enter-active,
+.admin-page-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.admin-page-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.admin-page-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-page-enter-active,
+  .admin-page-leave-active {
+    transition-duration: 0.01ms;
+  }
+  .admin-page-enter-from,
+  .admin-page-leave-to {
+    transform: none;
+  }
 }
 </style>
