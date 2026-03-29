@@ -41,9 +41,18 @@
       </div>
     </div>
 
-    <!-- 列表 -->
+    <!-- 列表：分页 / 查询成功后切换 listRenderKey，触发淡入 + 轻微位移动画 -->
     <el-card class="card" shadow="never">
-      <el-table :data="tableData" style="width: 100%; flex: 1;" height="100%" stripe>
+      <div class="table-anim-outer" v-loading="listLoading" element-loading-background="rgba(20, 20, 20, 0.65)">
+        <Transition name="ledger-page" mode="out-in">
+          <el-table
+            :key="listRenderKey"
+            :data="tableData"
+            class="ledger-table-inner"
+            style="width: 100%; flex: 1;"
+            height="100%"
+            stripe
+          >
         
         <el-table-column prop="batteryCode" label="ID" width="140" align="left" header-align="left">
           <template #default="{ row }">
@@ -117,7 +126,9 @@
             </div>
           </template>
         </el-table-column>
-      </el-table>
+          </el-table>
+        </Transition>
+      </div>
 
       <div class="pager">
         <el-pagination
@@ -178,6 +189,9 @@ const page = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 const tableData = ref<BatteryListItemDto[]>([])
+/** 仅在列表数据成功返回后递增，用于分页/筛选切换时的过渡动画 */
+const listRenderKey = ref(0)
+const listLoading = ref(false)
 
 // 状态相关工具
 function statusText(s: Status) {
@@ -251,10 +265,16 @@ async function doQuery() {
     params.commissioningDateEnd = q.dateRange[1]
   }
 
-  const resp = await axios.get('/api/batteries', { params })
-  const pageData = resp.data
-  total.value = pageData.totalElements
-  tableData.value = pageData.content as BatteryListItemDto[]
+  listLoading.value = true
+  try {
+    const resp = await axios.get('/api/batteries', { params })
+    const pageData = resp.data
+    total.value = pageData.totalElements
+    tableData.value = pageData.content as BatteryListItemDto[]
+    listRenderKey.value++
+  } finally {
+    listLoading.value = false
+  }
 }
 
 function resetQuery() {
@@ -425,6 +445,33 @@ const payload = {
   display: flex;
   flex-direction: column;
   overflow: hidden; 
+}
+
+.table-anim-outer {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.ledger-table-inner {
+  flex: 1;
+  min-height: 0;
+}
+
+/* 分页 / 筛选后列表切换：淡出 → 淡入 + 轻微上移 */
+.ledger-page-enter-active,
+.ledger-page-leave-active {
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+.ledger-page-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+.ledger-page-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
 }
 
 .pager {
