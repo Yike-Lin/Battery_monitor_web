@@ -60,11 +60,12 @@
         <LifecycleCapacityCard :points="lifecyclePoints" />
       </el-col>
 
-      <!-- 单次循环分析 -->
+      <!-- 单次循环分析（contentKey 在采样加载完成后变化，驱动内部切换动画） -->
       <el-col :span="16">
         <CycleAnalysisCard
           v-model="cyclePoint"
           :cycle-max="cycleMax"
+          :content-key="displayedCycle"
           :records="records"
           @change="onCycleChange"
         />
@@ -86,24 +87,26 @@
         </div>
       </div>
 
-      <div v-if="loadingRecords" class="muted" style="margin-bottom: 8px;">
-        正在加载采样数据...
+      <div class="records-anim-outer" v-loading="loadingRecords" element-loading-background="rgba(20, 20, 20, 0.65)">
+        <Transition name="ledger-page" mode="out-in">
+          <div :key="displayedCycle" class="records-anim-inner">
+            <div v-if="!records.length" class="muted empty-hint">
+              当前循环暂无采样数据
+            </div>
+            <div v-else class="table-wrapper">
+              <el-table :data="records" style="width: 100%" class="fill-table" stripe>
+                <el-table-column type="index" label="序号" width="70" />
+                <el-table-column prop="timeMin" label="时间(min)" min-width="120" sortable :formatter="formatDecimal" />
+                <el-table-column prop="voltage" label="电压(V)" min-width="120" sortable :formatter="formatDecimal" />
+                <el-table-column prop="current" label="电流(A)" min-width="120" sortable :formatter="formatDecimal" />
+                <el-table-column prop="temp" label="温度(℃)" min-width="120" sortable :formatter="formatDecimal" />
+                <el-table-column prop="capacity" label="容量(Ah)" min-width="120" sortable :formatter="formatDecimal" />
+                <el-table-column prop="cycle" label="循环号" min-width="90" sortable />
+              </el-table>
+            </div>
+          </div>
+        </Transition>
       </div>
-      <div v-else-if="!records.length" class="muted" style="margin-bottom: 8px;">
-        当前循环暂无采样数据
-      </div>
-
-      <div class="table-wrapper">
-        <el-table :data="records" style="width: 100%" class="fill-table" stripe>
-          <el-table-column type="index" label="序号" width="70" />
-          <el-table-column prop="timeMin" label="时间(min)" min-width="120" sortable :formatter="formatDecimal" />
-          <el-table-column prop="voltage" label="电压(V)" min-width="120" sortable :formatter="formatDecimal" />
-          <el-table-column prop="current" label="电流(A)" min-width="120" sortable :formatter="formatDecimal" />
-          <el-table-column prop="temp" label="温度(℃)" min-width="120" sortable :formatter="formatDecimal" />
-          <el-table-column prop="capacity" label="容量(Ah)" min-width="120" sortable :formatter="formatDecimal" />
-          <el-table-column prop="cycle" label="循环号" min-width="90" sortable />
-        </el-table>
-      </div> 
     </el-card>
   </div>
 </template>
@@ -175,6 +178,8 @@ const loadingRecords = ref(false)
 const errorMsg = ref<string | null>(null)
 const cyclePoint = ref<number>(1)
 const cycleMax = ref<number>(1)
+/** 与已加载的 records 对齐，仅在 by-cycle 请求成功后更新，用于切换循环时的过渡 key */
+const displayedCycle = ref<number>(1)
 
 const records = ref<BatteryRecordDto[]>([])
 const sohError = ref<SohErrorDto | null>(null)
@@ -237,6 +242,7 @@ async function loadBatteryDetail() {
       cycleMax.value = 1
       cyclePoint.value = 1
     }
+    displayedCycle.value = cyclePoint.value
     
     // 返回 ID 给 onMounted 用
     return currentId.value
@@ -272,9 +278,11 @@ async function loadRecordsByCycle(cycle: number) {
       params: { cycle },
     })
     records.value = resp.data || []
+    displayedCycle.value = cycle
   } catch (e: unknown) {
     console.error('加载记录失败', e)
     records.value = []
+    displayedCycle.value = cycle
   } finally {
     loadingRecords.value = false
   }
@@ -521,11 +529,44 @@ onMounted(async () => {
   border-bottom: none;
 }
 
+.records-anim-outer {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.records-anim-inner {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.empty-hint {
+  padding: 12px 15px 8px;
+}
+
 .table-wrapper {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+}
+
+/* 与台账分页一致的循环切换动效 */
+.ledger-page-enter-active,
+.ledger-page-leave-active {
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+.ledger-page-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+.ledger-page-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
 }
 
 .flex-fill :deep(.el-card__body) {
