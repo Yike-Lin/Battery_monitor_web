@@ -80,47 +80,51 @@
             </div>
           </template>
 
-          <div v-if="savedList.length" class="saved-list">
-            <div v-for="it in pagedSavedList" :key="it.id" class="save-item">
-              <div class="save-body">
-                <div class="save-meta">
-                  <div class="save-id mono">#{{ String(it.id).padStart(2, '0') }}</div>
-                  <div class="save-time muted">{{ formatCreatedAt(it.createdAt) }}</div>
-                </div>
-
-                <div class="save-sep" />
-
-                <div class="save-3col">
-                  <div class="col-cell">
-                    <div class="col-label muted">电池</div>
-                    <div class="col-value mono">{{ it.batteryCode }}</div>
-                  </div>
-                  <div class="col-cell">
-                    <div class="col-label muted">SOH</div>
-                    <div class="col-value mono accent">{{ it.sohPercent.toFixed(2) }}%</div>
-                  </div>
-                  <div class="col-cell">
-                    <div class="col-label muted">来源</div>
-                    <div class="col-value mono">{{ it.source }}</div>
-                  </div>
-
-                  <div class="col-cell">
-                    <div class="col-label muted">模型</div>
-                    <div class="col-value mono">{{ it.modelVersion || '—' }}</div>
-                  </div>
-                  <div class="col-cell">
-                    <div class="col-label muted">预测</div>
-                    <div class="col-value mono accent">
-                      {{ it.predictedSohPercent != null ? it.predictedSohPercent.toFixed(2) + '%' : '—' }}
+          <div v-if="savedList.length" class="saved-list-outer" v-loading="savedListLoading" element-loading-background="rgba(20, 20, 20, 0.65)">
+            <Transition name="ledger-page" mode="out-in">
+              <div :key="currentPage" class="saved-list">
+                <div v-for="it in pagedSavedList" :key="it.id" class="save-item">
+                  <div class="save-body">
+                    <div class="save-meta">
+                      <div class="save-id mono">#{{ String(it.id).padStart(2, '0') }}</div>
+                      <div class="save-time muted">{{ formatCreatedAt(it.createdAt) }}</div>
                     </div>
-                  </div>
-                  <div class="col-cell">
-                    <div class="col-label muted">备注</div>
-                    <div class="col-value mono">{{ it.note || '—' }}</div>
+
+                    <div class="save-sep" />
+
+                    <div class="save-3col">
+                      <div class="col-cell">
+                        <div class="col-label muted">电池</div>
+                        <div class="col-value mono">{{ it.batteryCode }}</div>
+                      </div>
+                      <div class="col-cell">
+                        <div class="col-label muted">SOH</div>
+                        <div class="col-value mono accent">{{ it.sohPercent.toFixed(2) }}%</div>
+                      </div>
+                      <div class="col-cell">
+                        <div class="col-label muted">来源</div>
+                        <div class="col-value mono">{{ it.source }}</div>
+                      </div>
+
+                      <div class="col-cell">
+                        <div class="col-label muted">模型</div>
+                        <div class="col-value mono">{{ it.modelVersion || '—' }}</div>
+                      </div>
+                      <div class="col-cell">
+                        <div class="col-label muted">预测</div>
+                        <div class="col-value mono accent">
+                          {{ it.predictedSohPercent != null ? it.predictedSohPercent.toFixed(2) + '%' : '—' }}
+                        </div>
+                      </div>
+                      <div class="col-cell">
+                        <div class="col-label muted">备注</div>
+                        <div class="col-value mono">{{ it.note || '—' }}</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            </Transition>
           </div>
 
           <div v-if="savedList.length" class="pager-wrap">
@@ -184,6 +188,7 @@ type SohSavedItem = {
 
 const savedList = ref<SohSavedItem[]>([])
 let inFlightLoadSaved: Promise<void> | null = null
+const savedListLoading = ref(false)
 const PAGE_SIZE = 10
 const currentPage = ref(1)
 
@@ -226,6 +231,7 @@ function messageFromUnknown(err: unknown, fallback: string): string {
 // 拉取 SOH 标注记录（添加顺序：createdAt 升序）
 async function loadSaved(limit = 2000, focusId?: number | null) {
   if (inFlightLoadSaved) return
+  savedListLoading.value = true
   inFlightLoadSaved = (async () => {
     const resp = await axios.get('/api/batteries/soh-annotations', { params: { limit } })
     const raw = resp.data
@@ -257,6 +263,7 @@ async function loadSaved(limit = 2000, focusId?: number | null) {
     await inFlightLoadSaved
   } finally {
     inFlightLoadSaved = null
+    savedListLoading.value = false
   }
 }
 
@@ -536,6 +543,11 @@ onMounted(() => {
 }
 
 
+.saved-list-outer {
+  position: relative;
+  min-height: 120px;
+}
+
 .saved-list {
   max-height: 560px;
   overflow: auto;
@@ -545,6 +557,20 @@ onMounted(() => {
   gap: 8px;
   scrollbar-color: #3a3a3a transparent; /* Firefox */
   scrollbar-width: thin;
+}
+
+/* 与电池台账分页一致：淡出 → 淡入 + 轻微位移 */
+.ledger-page-enter-active,
+.ledger-page-leave-active {
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+.ledger-page-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+.ledger-page-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
 }
 
 .pager-wrap {
