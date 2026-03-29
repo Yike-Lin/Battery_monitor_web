@@ -15,16 +15,21 @@
           <template #prefix>Cycle</template>
         </el-input-number>
       </div>
-      
-      <div class="cycle-stats-bar">
-        <span class="stat">Max V: <b>{{ stats.maxV }}V</b></span>
-        <span class="stat">Min V: <b>{{ stats.minV }}V</b></span>
-        <span class="stat">Max T: <b class="warn">{{ stats.maxT }}℃</b></span>
-        <span class="stat">Time: <b>{{ stats.duration }}min</b></span>
-      </div>
     </div>
 
-    <div class="chart-placeholder cycle-chart" ref="chartRef"></div>
+    <div class="cycle-transition-shell">
+      <Transition name="ledger-page" mode="out-in" @after-enter="onChartAfterEnter">
+        <div :key="animKey" class="cycle-animate-body">
+          <div class="cycle-stats-bar">
+            <span class="stat">Max V: <b>{{ stats.maxV }}V</b></span>
+            <span class="stat">Min V: <b>{{ stats.minV }}V</b></span>
+            <span class="stat">Max T: <b class="warn">{{ stats.maxT }}℃</b></span>
+            <span class="stat">Time: <b>{{ stats.duration }}min</b></span>
+          </div>
+          <div class="chart-placeholder cycle-chart" ref="chartRef"></div>
+        </div>
+      </Transition>
+    </div>
   </el-card>
 </template>
 
@@ -47,7 +52,11 @@ const props = defineProps<{
   modelValue: number
   cycleMax: number
   records: CycleAnalysisRecord[]
+  /** 与父组件已加载的循环对齐（请求完成后更新），用于切换动效 key；不传则用 modelValue */
+  contentKey?: number
 }>()
+
+const animKey = computed(() => props.contentKey ?? props.modelValue)
 
 const cycleMax = computed(() => props.cycleMax)
 const emit = defineEmits(['update:modelValue', 'change'])
@@ -91,12 +100,18 @@ const stats = computed(() => {
 const chartRef = ref<HTMLElement | null>(null)
 let chartInstance: echarts.ECharts | null = null
 
-const initChart = () => {
-  if (chartRef.value) {
-    chartInstance = echarts.init(chartRef.value, 'dark')
-    updateChart()
-    window.addEventListener('resize', resizeChart)
+function mountChart() {
+  if (chartInstance) {
+    chartInstance.dispose()
+    chartInstance = null
   }
+  if (!chartRef.value) return
+  chartInstance = echarts.init(chartRef.value, 'dark')
+  updateChart()
+}
+
+function onChartAfterEnter() {
+  nextTick(() => mountChart())
 }
 
 const updateChart = () => {
@@ -185,15 +200,22 @@ const updateChart = () => {
 const resizeChart = () => chartInstance?.resize()
 
 // 监听 records 数据变化，更新图表
-watch(() => props.records, () => {
-  nextTick(() => updateChart())
-}, { deep: true })
+watch(
+  () => props.records,
+  () => {
+    nextTick(() => updateChart())
+  },
+  { deep: true },
+)
 
-onMounted(() => nextTick(() => initChart()))
+onMounted(() => {
+  window.addEventListener('resize', resizeChart)
+})
 
 onUnmounted(() => {
   window.removeEventListener('resize', resizeChart)
   chartInstance?.dispose()
+  chartInstance = null
 })
 </script>
 
@@ -201,12 +223,48 @@ onUnmounted(() => {
 .card { background: #141414; border: 1px solid #2a2a2a; border-radius: 10px; }
 .viz-card { height: 340px; display: flex; flex-direction: column; }
 .viz-card :deep(.el-card__body) { padding: 0; height: 100%; display: flex; flex-direction: column; }
+.cycle-transition-shell {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
 .card-header { padding: 1px 15px; border-bottom: 1px solid #252525; background: #181818; font-size: 16px; font-weight: 600; color: #eee; }
 .flex-between { display: flex; justify-content: space-between; align-items: center; }
 .left-tools { display: flex; align-items: center; gap: 12px; }
 .cycle-input { width: 110px; }
-.cycle-stats-bar { display: flex; gap: 15px; font-size: 12px; color: #999; }
+.cycle-animate-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cycle-stats-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 15px;
+  padding: 8px 15px 6px;
+  font-size: 12px;
+  color: #999;
+  border-bottom: 1px solid #252525;
+  background: #181818;
+}
 .cycle-stats-bar b { color: #eee; margin-left: 2px; }
 .cycle-stats-bar b.warn { color: #e6a23c; }
-.chart-placeholder { flex: 1; width: 100%; position: relative; background: linear-gradient(180deg, #141414 0%, #181818 100%); display: flex; align-items: center; justify-content: center; }
+.chart-placeholder { flex: 1; width: 100%; position: relative; background: linear-gradient(180deg, #141414 0%, #181818 100%); display: flex; align-items: center; justify-content: center; min-height: 0; }
+
+.ledger-page-enter-active,
+.ledger-page-leave-active {
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+.ledger-page-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+.ledger-page-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
 </style>
