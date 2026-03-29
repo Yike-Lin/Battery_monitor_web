@@ -230,11 +230,6 @@ async function handleCsvUpload(option: { file: File; onSuccess?: (data: unknown,
       form.sohPercent = Number(draft.sohPercent)
     }
 
-    // 如果后端未来也自动解析 batteryCode / modelCode 等，也可以填：
-    // if (draft.batteryCode) form.batteryCode = draft.batteryCode
-    // if (draft.modelCode) form.modelCode = draft.modelCode
-    // if (draft.customerName) form.customerName = draft.customerName
-    // if (draft.ratedCapacityAh != null) form.ratedCapacityAh = draft.ratedCapacityAh
 
     ElMessage.success('CSV 解析成功，已绑定预测数据')
     option.onSuccess?.(resp.data, file)
